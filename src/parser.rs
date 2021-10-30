@@ -11,8 +11,8 @@ pub fn parse(source: &str) -> std::result::Result<Vec<AstNode>, pest::error::Err
 
     for pair in pairs {
         if let Rule::Alternation = pair.as_rule() {
-            let mut nodes = build_ast_from_expr(Vec::new(), pair);
-            ast.append(&mut nodes);
+            let node = build_ast_from_expr(pair);
+            ast.push(node);
         } else if let Rule::EOI = pair.as_rule() {
             ast.push(AstNode::Terminal);
         }
@@ -24,6 +24,13 @@ pub fn parse(source: &str) -> std::result::Result<Vec<AstNode>, pest::error::Err
 mod test {
     use super::*;
 
+    fn ast_as_str(asts: Vec<AstNode>) -> String {
+        asts.into_iter()
+            .map(|mut ast| ast.as_str())
+            .collect::<Vec<String>>()
+            .join("")
+    }
+
     #[test]
     fn test_parser_single() {
         let result = parse("a").unwrap_or(vec![]);
@@ -32,30 +39,14 @@ mod test {
     }
     #[test]
     fn test_parser_concat() {
-        let result = parse("abc").unwrap_or(vec![]);
-        let expected = vec![
-            AstNode::Literal('a'),
-            AstNode::Literal('b'),
-            AstNode::Concatenation,
-            AstNode::Literal('c'),
-            AstNode::Concatenation,
-            AstNode::Terminal,
-        ];
+        let result = ast_as_str(parse("abc").unwrap());
+        let expected = "ab.c.$".to_string();
         assert_eq!(result, expected);
     }
-
     #[test]
     fn test_parser_quantifier() {
-        let result = parse("ab?c").unwrap_or(vec![]);
-        let expected = vec![
-            AstNode::Literal('a'),
-            AstNode::Literal('b'),
-            AstNode::Quantifier('?'),
-            AstNode::Concatenation,
-            AstNode::Literal('c'),
-            AstNode::Concatenation,
-            AstNode::Terminal,
-        ];
+        let result = ast_as_str(parse("ab?c").unwrap());
+        let expected = "ab?.c.$".to_string();
         assert_eq!(result, expected);
     }
 }
