@@ -13,11 +13,10 @@ pub fn parse(source: &str) -> std::result::Result<Vec<AstNode>, pest::error::Err
         if let Rule::Alternation = pair.as_rule() {
             let mut nodes = build_ast_from_expr(Vec::new(), pair);
             ast.append(&mut nodes);
-        } else {
-            // EOI
+        } else if let Rule::EOI = pair.as_rule() {
+            ast.push(AstNode::Terminal);
         }
     }
-    ast.push(AstNode::Terminal);
     Ok(ast)
 }
 
