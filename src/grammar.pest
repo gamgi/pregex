@@ -1,7 +1,9 @@
+
 Regex 			= _{ SOI ~ Alternation ~ EOI }
-Alternation     =  { Concatenation ~ ( "|" ~ Alternation )? }
-Concatenation   =  { Item ~ ( Concatenation | Item ) }
-Item 			=  _{ Quantified | Literal }
+Alternation     =  { ( ConcatMaybe | Concat | Item ) ~ ( "|" ~ Alternation )? }
+ConcatMaybe     =  { ( Concat | Item ) ~ (ConcatMaybe)? }
+Concat          =  { Item ~ Item }
+Item 			= _{ Quantified | Literal }
 Quantified      =  { Literal ~ Quantifier }
 Literal 		=  { ASCII_ALPHA }
 Quantifier	    =  { "+" | "?" | "*" }
