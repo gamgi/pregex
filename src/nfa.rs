@@ -24,6 +24,8 @@ pub fn ast_to_nfa(ast: AstNode, index: usize, out: usize) -> Vec<State> {
 fn ast_to_frag(ast: AstNode, index: usize, outs: (Option<usize>, Option<usize>)) -> Frag {
     match ast.kind {
         Kind::Concatenation(left, right) => {
+            // left points to start of right and right points to outs
+            // left as start
             let right = ast_to_frag(*right, index + left.length, outs);
             let left = ast_to_frag(*left, index, (Some(right.start), None));
             Frag {
@@ -33,11 +35,15 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: (Option<usize>, Option<usize>))
             }
         }
         Kind::Literal(_) => Frag {
-            states: vec![State(ast, outs.0, None)],
+            // literal points to outs
+            // literal as start
+            states: vec![State(ast, outs.0, outs.1)],
             start: index,
-            outs: (outs.0, None),
+            outs: outs,
         },
         Kind::Quantified(c, left) => {
+            // left points to outs and quantifier points to left and outs.0
+            // quantifier as start
             let quantifier_start = index + left.length;
             let quantifier = ast_to_frag(
                 AstNode {
@@ -56,16 +62,19 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: (Option<usize>, Option<usize>))
             }
         }
         Kind::Quantifier(_) => Frag {
+            // quantifier points to outs
+            // quantifier as start
             states: vec![State(ast, outs.0, outs.1)],
             start: index,
             outs: outs,
         },
         Kind::Terminal => Frag {
+            // terminal points to none
+            // terminal as start
             states: vec![State(ast, None, None)],
             start: index,
             outs: (None, None),
         },
-        _ => ast_to_frag(ast, index, outs),
     }
 }
 
