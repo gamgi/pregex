@@ -154,4 +154,48 @@ mod test {
         assert_eq!(matches(&nfa, "abc"), true);
         assert_eq!(matches(&nfa, "abcd"), true);
     }
+
+    #[test]
+    fn test_matches_simple_star() {
+        let nfa = vec![
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Quantifier('*'),
+                },
+                (Some(1), Some(3)),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('c'),
+                },
+                (Some(4), None),
+            ),
+            State::new(AstNode {
+                length: 1,
+                kind: Kind::Terminal,
+            }),
+        ];
+        assert_eq!(matches(&nfa, "a"), false);
+        assert_eq!(matches(&nfa, "ab"), false);
+        assert_eq!(matches(&nfa, "abbc"), true);
+        assert_eq!(matches(&nfa, "ac"), true);
+        assert_eq!(matches(&nfa, "abc"), true);
+        assert_eq!(matches(&nfa, "abcd"), true); // TODO
+    }
 }
