@@ -5,5 +5,5 @@ ConcatMaybe     =  { ( Concat | Item ) ~ (ConcatMaybe)? }
 Concat          =  { Item ~ Item }
 Item 			= _{ Quantified | Literal }
 Quantified      =  { Literal ~ Quantifier }
-Literal 		=  { ASCII_ALPHA }
+Literal 		=  { ASCII_ALPHA | " " }
 Quantifier	    =  { "+" | "?" | "*" }
