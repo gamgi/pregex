@@ -4,8 +4,8 @@ pub const PATTERN_OPTION: &str = "pattern";
 pub const STRING_OPTION: &str = "string";
 
 pub struct Config {
-    pattern: String,
-    string: String,
+    pub pattern: String,
+    pub string: String,
 }
 
 pub fn parse_options(options: ArgMatches) -> Result<Config, String> {

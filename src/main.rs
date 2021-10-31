@@ -35,6 +35,14 @@ fn main() -> Result<(), String> {
         .get_matches();
 
     let config = parse_options(options)?;
+    let asts = parser::parse(&config.pattern).unwrap_or_else(|error| {
+        panic!("{}", error);
+    });
+    let nfa = nfa::asts_to_nfa(asts);
+    match runner::matches(&nfa, &config.string) {
+        true => println!("{}", config.string),
+        false => {}
+    };
 
     Ok(())
 }

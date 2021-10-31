@@ -45,6 +45,7 @@ pub fn asts_to_nfa(asts: Vec<AstNode>) -> Vec<State> {
     states
 }
 
+#[allow(dead_code)]
 pub fn ast_to_nfa(ast: AstNode, index: usize, out: usize) -> Vec<State> {
     let nfa_frag = ast_to_frag(ast, index, (Some(out), None));
     nfa_frag.states
