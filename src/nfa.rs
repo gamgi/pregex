@@ -13,19 +13,19 @@ impl State {
 struct Frag {
     states: Vec<State>,
     start: usize,
-    outs: (usize, Option<usize>),
+    outs: (Option<usize>, Option<usize>),
 }
 
 pub fn ast_to_nfa(ast: AstNode, index: usize, out: usize) -> Vec<State> {
-    let nfa_frag = ast_to_frag(ast, index, (out, None));
+    let nfa_frag = ast_to_frag(ast, index, (Some(out), None));
     nfa_frag.states
 }
 
-fn ast_to_frag(ast: AstNode, index: usize, outs: (usize, Option<usize>)) -> Frag {
+fn ast_to_frag(ast: AstNode, index: usize, outs: (Option<usize>, Option<usize>)) -> Frag {
     match ast.kind {
         Kind::Concatenation(left, right) => {
             let right = ast_to_frag(*right, index + left.length, outs);
-            let left = ast_to_frag(*left, index, (right.start, None));
+            let left = ast_to_frag(*left, index, (Some(right.start), None));
             Frag {
                 states: [left.states, right.states].concat(),
                 start: left.start,
@@ -33,9 +33,9 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: (usize, Option<usize>)) -> Frag
             }
         }
         Kind::Literal(_) => Frag {
-            states: vec![State(ast, Some(outs.0), None)],
+            states: vec![State(ast, outs.0, None)],
             start: index,
-            outs: (index + 1, None),
+            outs: (outs.0, None),
         },
         Kind::Quantified(c, left) => {
             let quantifier_start = index + left.length;
@@ -45,7 +45,7 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: (usize, Option<usize>)) -> Frag
                     kind: Kind::Quantifier(c),
                 },
                 quantifier_start,
-                (index, Some(outs.0)),
+                (Some(index), outs.0),
             );
             let left = ast_to_frag(*left, index, outs);
             // TODO should be built in ast.rs
@@ -56,14 +56,14 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: (usize, Option<usize>)) -> Frag
             }
         }
         Kind::Quantifier(_) => Frag {
-            states: vec![State(ast, Some(outs.0), outs.1)],
+            states: vec![State(ast, outs.0, outs.1)],
             start: index,
             outs: outs,
         },
         Kind::Terminal => Frag {
             states: vec![State(ast, None, None)],
             start: index,
-            outs: (index, None),
+            outs: (None, None),
         },
         _ => ast_to_frag(ast, index, outs),
     }
