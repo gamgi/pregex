@@ -7,15 +7,15 @@ pub struct State {
 }
 
 impl State {
-    fn new(c: AstNode) -> State {
+    pub fn new(node: AstNode) -> State {
         State {
-            node: c,
+            node: node,
             outs: (None, None),
         }
     }
-    fn from(c: AstNode, outs: Outs) -> State {
+    pub fn from(node: AstNode, outs: Outs) -> State {
         State {
-            node: c,
+            node: node,
             outs: outs,
         }
     }
