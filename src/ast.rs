@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 use crate::parser::Rule;
 use itertools::Itertools;
 use std::fmt;
@@ -73,12 +74,10 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
                 kind: Kind::Literal(c),
             }
         }
-        Rule::EOI => {
-            AstNode {
-                length: 0,
-                kind: Kind::Terminal,
-            }
-        }
+        Rule::EOI => AstNode {
+            length: 0,
+            kind: Kind::Terminal,
+        },
         _ => build_ast_from_expr(pair),
     }
 }

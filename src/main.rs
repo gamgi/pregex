@@ -5,6 +5,7 @@ extern crate pest;
 extern crate pest_derive;
 
 mod ast;
+mod nfa;
 mod parser;
 
 fn main() {
