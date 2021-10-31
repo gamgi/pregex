@@ -1,4 +1,4 @@
-use crate::ast::{build_ast_from_expr, AstNode};
+use crate::ast::{build_ast_from_expr, AstNode, Kind};
 use pest::Parser;
 
 #[derive(Parser)]
@@ -14,7 +14,10 @@ pub fn parse(source: &str) -> std::result::Result<Vec<AstNode>, pest::error::Err
             let node = build_ast_from_expr(pair);
             ast.push(node);
         } else if let Rule::EOI = pair.as_rule() {
-            ast.push(AstNode::Terminal);
+            ast.push(AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            });
         }
     }
     Ok(ast)
@@ -26,23 +29,40 @@ mod test {
 
     fn ast_as_str(asts: Vec<AstNode>) -> String {
         asts.into_iter()
-            .map(|mut ast| ast.as_str())
+            .map(|ast| ast.to_string())
             .collect::<Vec<String>>()
             .join("")
     }
 
     #[test]
-    fn test_parser_single() {
+    fn test_parser_single_length() {
         let result = parse("a").unwrap_or(vec![]);
-        let expected = vec![AstNode::Literal('a'), AstNode::Terminal];
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Literal('a'),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
         assert_eq!(result, expected);
     }
+
+    #[test]
+    fn test_parser_concat_length() {
+        let result = parse("ab").unwrap_or(vec![]).first().unwrap().to_owned();
+        assert_eq!(result.length, 2);
+    }
+
     #[test]
     fn test_parser_concat() {
         let result = ast_as_str(parse("abc").unwrap());
         let expected = "ab.c.$".to_string();
         assert_eq!(result, expected);
     }
+
     #[test]
     fn test_parser_quantifier() {
         let result = ast_as_str(parse("ab?c").unwrap());

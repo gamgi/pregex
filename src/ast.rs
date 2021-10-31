@@ -36,34 +36,49 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
         Rule::Concat => {
             let mut pair = pair.into_inner();
             let (left, right) = pair.next_tuple().unwrap();
-            AstNode::Concatenation(
-                Box::new(build_ast_from_expr(left)),
-                Box::new(build_ast_from_expr(right)),
-            )
+            let left_ast = build_ast_from_expr(left);
+            let right_ast = build_ast_from_expr(right);
+            AstNode {
+                length: left_ast.length + right_ast.length,
+                kind: Kind::Concatenation(Box::new(left_ast), Box::new(right_ast)),
+            }
         }
         Rule::ConcatMaybe => {
             let mut pair = pair.into_inner();
             let left = pair.next().unwrap();
+            let left_ast = build_ast_from_expr(left);
 
             if let Some(right) = pair.next() {
-                return AstNode::Concatenation(
-                    Box::new(build_ast_from_expr(left)),
-                    Box::new(build_ast_from_expr(right)),
-                );
+                let right_ast = build_ast_from_expr(right);
+                return AstNode {
+                    length: left_ast.length + right_ast.length,
+                    kind: Kind::Concatenation(Box::new(left_ast), Box::new(right_ast)),
+                };
             }
-            build_ast_from_expr(left)
+            left_ast
         }
         Rule::Quantified => {
             let mut pair = pair.into_inner();
-            let left = pair.next().unwrap();
-            let c = pair.as_str().chars().next().unwrap();
-            AstNode::Quantifier(c, Box::new(build_ast_from_expr(left)))
+            let left = build_ast_from_expr(pair.next().unwrap());
+            let c = pair.as_str().chars().next().unwrap(); // HACK
+            AstNode {
+                length: left.length,
+                kind: Kind::Quantifier(c, Box::new(left)),
+            }
         }
         Rule::Literal => {
             let c = pair.as_str().chars().next().unwrap();
-            AstNode::Literal(c)
+            AstNode {
+                length: 1,
+                kind: Kind::Literal(c),
+            }
         }
-        Rule::EOI => AstNode::Terminal,
+        Rule::EOI => {
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            }
+        }
         _ => build_ast_from_expr(pair),
     }
 }
