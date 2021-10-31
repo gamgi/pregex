@@ -8,14 +8,33 @@ extern crate pest_derive;
 extern crate log;
 extern crate env_logger;
 
+extern crate clap;
+use clap::{App, Arg, ArgMatches};
+
 use log::Level;
 
 mod ast;
+mod config;
 mod nfa;
 mod parser;
 mod runner;
+use config::{parse_options, PATTERN_OPTION, STRING_OPTION};
 
-fn main() {
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+fn main() -> Result<(), String> {
     env_logger::init();
-    println!("Hello, world!");
+    let options = App::new("Pregex")
+        .version(VERSION)
+        .arg(Arg::with_name("pattern").help("Regexp pattern").index(1))
+        .arg(
+            Arg::with_name("string")
+                .help("String to match against")
+                .index(2),
+        )
+        .get_matches();
+
+    let config = parse_options(options)?;
+
+    Ok(())
 }
