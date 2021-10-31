@@ -1,19 +1,33 @@
 use crate::ast::{AstNode, Kind};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct State(pub AstNode, pub Option<usize>, pub Option<usize>);
+pub struct State {
+    pub node: AstNode,
+    pub outs: Outs,
+}
 
 impl State {
     fn new(c: AstNode) -> State {
-        State(c, None, None)
+        State {
+            node: c,
+            outs: (None, None),
+        }
+    }
+    fn from(c: AstNode, outs: Outs) -> State {
+        State {
+            node: c,
+            outs: outs,
+        }
     }
 }
+
+type Outs = (Option<usize>, Option<usize>);
 
 #[derive(Debug)]
 struct Frag {
     states: Vec<State>,
     start: usize,
-    outs: (Option<usize>, Option<usize>),
+    outs: Outs,
 }
 
 pub fn ast_to_nfa(ast: AstNode, index: usize, out: usize) -> Vec<State> {
@@ -21,7 +35,7 @@ pub fn ast_to_nfa(ast: AstNode, index: usize, out: usize) -> Vec<State> {
     nfa_frag.states
 }
 
-fn ast_to_frag(ast: AstNode, index: usize, outs: (Option<usize>, Option<usize>)) -> Frag {
+fn ast_to_frag(ast: AstNode, index: usize, outs: Outs) -> Frag {
     match ast.kind {
         Kind::Concatenation(left, right) => {
             // left points to start of right and right points to outs
@@ -37,7 +51,7 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: (Option<usize>, Option<usize>))
         Kind::Literal(_) => Frag {
             // literal points to outs
             // literal as start
-            states: vec![State(ast, outs.0, outs.1)],
+            states: vec![State::from(ast, outs)],
             start: index,
             outs: outs,
         },
@@ -68,14 +82,14 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: (Option<usize>, Option<usize>))
         Kind::Quantifier(_) => Frag {
             // quantifier points to outs
             // quantifier as start
-            states: vec![State(ast, outs.0, outs.1)],
+            states: vec![State::from(ast, outs)],
             start: index,
             outs: outs,
         },
         Kind::Terminal => Frag {
             // terminal points to none
             // terminal as start
-            states: vec![State(ast, None, None)],
+            states: vec![State::new(ast)],
             start: index,
             outs: (None, None),
         },
@@ -106,21 +120,19 @@ mod test {
             2,
         );
         let expected = vec![
-            State(
+            State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('a'),
                 },
-                Some(1),
-                None,
+                (Some(1), None),
             ),
-            State(
+            State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('b'),
                 },
-                Some(2),
-                None,
+                (Some(2), None),
             ),
         ];
         assert_eq!(result, expected);
@@ -155,29 +167,26 @@ mod test {
             3,
         );
         let expected = vec![
-            State(
+            State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('a'),
                 },
-                Some(2),
-                None,
+                (Some(2), None),
             ),
-            State(
+            State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('b'),
                 },
-                Some(3),
-                None,
+                (Some(3), None),
             ),
-            State(
+            State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Quantifier('?'),
                 },
-                Some(1),
-                Some(3),
+                (Some(1), Some(3)),
             ),
         ];
         assert_eq!(result, expected);
@@ -212,29 +221,26 @@ mod test {
             3,
         );
         let expected = vec![
-            State(
+            State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('a'),
                 },
-                Some(2),
-                None,
+                (Some(2), None),
             ),
-            State(
+            State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('b'),
                 },
-                Some(2),
-                None,
+                (Some(2), None),
             ),
-            State(
+            State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Quantifier('*'),
                 },
-                Some(1),
-                Some(3),
+                (Some(1), Some(3)),
             ),
         ];
         assert_eq!(result, expected);
