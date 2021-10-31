@@ -12,7 +12,8 @@ pub struct AstNode {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Kind {
     Literal(char),
-    Quantifier(char, Box<AstNode>),
+    Quantified(char, Box<AstNode>),
+    Quantifier(char),
     Concatenation(Box<AstNode>, Box<AstNode>),
     Terminal,
 }
@@ -22,7 +23,8 @@ impl fmt::Display for AstNode {
         match &self.kind {
             Kind::Literal(c) => write!(f, "{}", c),
             Kind::Concatenation(l, r) => write!(f, "{}{}.", l.to_owned(), r.to_owned()),
-            Kind::Quantifier(c, l) => write!(f, "{}{}", l.to_owned(), c),
+            Kind::Quantified(c, l) => write!(f, "{}{}", l.to_owned(), c),
+            Kind::Quantifier(c) => write!(f, "{}", c),
             Kind::Terminal => write!(f, "$"),
         }
     }
@@ -64,7 +66,7 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
             let c = pair.as_str().chars().next().unwrap(); // HACK
             AstNode {
                 length: left.length,
-                kind: Kind::Quantifier(c, Box::new(left)),
+                kind: Kind::Quantified(c, Box::new(left)),
             }
         }
         Rule::Literal => {
