@@ -41,20 +41,24 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: (Option<usize>, Option<usize>))
             start: index,
             outs: outs,
         },
-        Kind::Quantified(c, left) => {
-            // left points to outs and quantifier points to left and outs.0
+        Kind::Quantified(quantifier, left) => {
+            // left points to
+            // - outs for ?
+            // - quantifier for *
+            // and quantifier points to left and outs.0
             // quantifier as start
             let quantifier_start = index + left.length;
-            let quantifier = ast_to_frag(
-                AstNode {
-                    length: 1,
-                    kind: Kind::Quantifier(c),
-                },
-                quantifier_start,
-                (Some(index), outs.0),
-            );
-            let left = ast_to_frag(*left, index, outs);
-            // TODO should be built in ast.rs
+            let left = if let Kind::Quantifier(c) = quantifier.kind {
+                let left_outs = match c {
+                    '*' => (Some(quantifier_start), None),
+                    _ => outs,
+                };
+                ast_to_frag(*left, index, left_outs)
+            } else {
+                panic!("invalid quantifier {}", quantifier);
+            };
+
+            let quantifier = ast_to_frag(*quantifier, quantifier_start, (Some(index), outs.0));
             Frag {
                 states: [left.states, quantifier.states].concat(),
                 start: quantifier_start,
@@ -135,7 +139,10 @@ mod test {
                     Box::new(AstNode {
                         length: 1,
                         kind: Kind::Quantified(
-                            '?',
+                            Box::new(AstNode {
+                                length: 1,
+                                kind: Kind::Quantifier('?'),
+                            }),
                             Box::new(AstNode {
                                 length: 1,
                                 kind: Kind::Literal('b'),
@@ -168,6 +175,63 @@ mod test {
                 AstNode {
                     length: 1,
                     kind: Kind::Quantifier('?'),
+                },
+                Some(1),
+                Some(3),
+            ),
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_compile_star() {
+        let result = ast_to_nfa(
+            AstNode {
+                length: 3,
+                kind: Kind::Concatenation(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Literal('a'),
+                    }),
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Quantified(
+                            Box::new(AstNode {
+                                length: 1,
+                                kind: Kind::Quantifier('*'),
+                            }),
+                            Box::new(AstNode {
+                                length: 1,
+                                kind: Kind::Literal('b'),
+                            }),
+                        ),
+                    }),
+                ),
+            },
+            0,
+            3,
+        );
+        let expected = vec![
+            State(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                Some(2),
+                None,
+            ),
+            State(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                Some(2),
+                None,
+            ),
+            State(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Quantifier('*'),
                 },
                 Some(1),
                 Some(3),

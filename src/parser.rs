@@ -64,9 +64,16 @@ mod test {
     }
 
     #[test]
-    fn test_parser_quantifier() {
+    fn test_parser_conditional() {
         let result = ast_as_str(parse("ab?c").unwrap());
         let expected = "ab?.c.$".to_string();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_star() {
+        let result = ast_as_str(parse("ab*c").unwrap());
+        let expected = "ab*.c.$".to_string();
         assert_eq!(result, expected);
     }
 }
