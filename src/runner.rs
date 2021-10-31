@@ -110,6 +110,7 @@ mod test {
         assert_eq!(matches(&nfa, "ab"), true);
         assert_eq!(matches(&nfa, "bb"), false);
     }
+
     #[test]
     fn test_matches_simple_conditional() {
         let nfa = vec![

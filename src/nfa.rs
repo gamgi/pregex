@@ -1,4 +1,5 @@
 use crate::ast::{AstNode, Kind};
+use crate::parser::parse;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct State {
@@ -34,8 +35,9 @@ pub fn asts_to_nfa(asts: Vec<AstNode>) -> Vec<State> {
     // concatenate asts to single state list (HACK)
     let mut states = Vec::new();
     let mut start: usize = 0;
+
     for ast in asts {
-        let end = start + ast.length + 1;
+        let end = start + ast.length;
         let nfa_frag = ast_to_frag(ast, start, (Some(end), None));
         start = nfa_frag.states.len();
         states.extend(nfa_frag.states);
@@ -331,7 +333,7 @@ mod test {
                     length: 1,
                     kind: Kind::Quantifier('*'),
                 },
-                (Some(1), Some(4)),
+                (Some(1), Some(3)),
             ),
             State::new(AstNode {
                 length: 1,
@@ -340,6 +342,47 @@ mod test {
         ];
 
         let result = asts_to_nfa(vec![first, second]);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_nfas_to_ast2() {
+        let asts = parse("ab?c").unwrap();
+        let result = asts_to_nfa(asts);
+        let expected = vec![
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(3), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Quantifier('?'),
+                },
+                (Some(1), Some(3)),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('c'),
+                },
+                (Some(4), None),
+            ),
+            State::new(AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            }),
+        ];
         assert_eq!(result, expected);
     }
 }

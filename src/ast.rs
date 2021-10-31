@@ -69,7 +69,7 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
                 kind: Kind::Quantifier(c),
             };
             AstNode {
-                length: left.length,
+                length: left.length + quantifier.length,
                 kind: Kind::Quantified(Box::new(quantifier), Box::new(left)),
             }
         }
