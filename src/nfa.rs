@@ -30,6 +30,21 @@ struct Frag {
     outs: Outs,
 }
 
+pub fn asts_to_nfa(asts: Vec<AstNode>) -> Vec<State> {
+    // concatenate asts to single state list (HACK)
+    let mut states = Vec::new();
+    let mut start: usize = 0;
+    for ast in asts {
+        let end = start + ast.length;
+        let nfa_frag = ast_to_frag(ast, start, (Some(end), None));
+        if let Some(len) = nfa_frag.outs.0 {
+            start = len;
+        }
+        states.extend(nfa_frag.states);
+    }
+    states
+}
+
 pub fn ast_to_nfa(ast: AstNode, index: usize, out: usize) -> Vec<State> {
     let nfa_frag = ast_to_frag(ast, index, (Some(out), None));
     nfa_frag.states
@@ -243,6 +258,66 @@ mod test {
                 (Some(1), Some(3)),
             ),
         ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_nfas_to_ast() {
+        let first = AstNode {
+            length: 3,
+            kind: Kind::Concatenation(
+                Box::new(AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                }),
+                Box::new(AstNode {
+                    length: 1,
+                    kind: Kind::Quantified(
+                        Box::new(AstNode {
+                            length: 1,
+                            kind: Kind::Quantifier('*'),
+                        }),
+                        Box::new(AstNode {
+                            length: 1,
+                            kind: Kind::Literal('b'),
+                        }),
+                    ),
+                }),
+            ),
+        };
+        let second = AstNode {
+            length: 1,
+            kind: Kind::Terminal,
+        };
+        let expected = vec![
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Quantifier('*'),
+                },
+                (Some(1), Some(3)),
+            ),
+            State::new(AstNode {
+                length: 1,
+                kind: Kind::Terminal,
+            }),
+        ];
+
+        let result = asts_to_nfa(vec![first, second]);
         assert_eq!(result, expected);
     }
 }
