@@ -1,6 +1,7 @@
 #![allow(dead_code, unused_imports, unused_mut, unused_variables)]
 use crate::ast::{AstNode, Kind};
 use crate::nfa::State;
+use log::Level;
 use std::collections::HashSet;
 
 fn add_state(
@@ -11,6 +12,7 @@ fn add_state(
 ) {
     if let Some(i) = add_idx {
         if !visited.insert(i) {
+            debug!("  skip {}", nfa[i].node.to_string());
             return;
         }
         let state = &nfa[i];
@@ -21,6 +23,7 @@ fn add_state(
             return;
         } else {
             // add state
+            debug!("  add  {}", state.node.to_string());
             current_states.push(state.clone());
         }
     }
@@ -33,13 +36,28 @@ fn step(
     current_states: Vec<State>,
 ) -> Vec<State> {
     let mut new_states = Vec::new();
+    if log_enabled!(Level::Debug) {
+        debug!("step {}", c);
+        debug!(
+            "  current_states {:?}",
+            current_states
+                .iter()
+                .map(|s| s.node.to_string())
+                .collect::<Vec<String>>()
+        );
+    }
+
     for state in current_states.iter() {
         if let Kind::Terminal = state.node.kind {
             // end
             add_state(state.outs.0, nfa, visited, &mut new_states);
+            debug!("  match terminal");
         } else if state.node.to_string() == c.to_string() {
             // match
+            debug!("  match {} add {:?}", c, state.outs.0);
             add_state(state.outs.0, nfa, visited, &mut new_states);
+        } else {
+            debug!("  {} != {}", state.node.to_string(), c.to_string());
         }
     }
     new_states
