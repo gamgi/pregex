@@ -80,16 +80,14 @@ mod test {
             State::from(
                 AstNode {
                     length: 1,
-                    kind: Kind::Literal('a'),
+                    kind: Kind::Literal('b'),
                 },
                 (Some(2), None),
             ),
-            // State::new(
-            //     AstNode {
-            //         length: 1,
-            //         kind: Kind::Terminal
-            //     }
-            // ),
+            State::new(AstNode {
+                length: 1,
+                kind: Kind::Terminal,
+            }),
         ];
         assert_eq!(matches(&nfa, "ab"), true);
         assert_eq!(matches(&nfa, "bb"), false);
