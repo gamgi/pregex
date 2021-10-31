@@ -1,21 +1,28 @@
 use crate::parser::Rule;
 use itertools::Itertools;
+use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum AstNode {
+pub struct AstNode {
+    pub length: usize,
+    pub kind: Kind,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Kind {
     Literal(char),
     Quantifier(char, Box<AstNode>),
     Concatenation(Box<AstNode>, Box<AstNode>),
     Terminal,
 }
 
-impl AstNode {
-    pub fn as_str(&mut self) -> String {
-        match self {
-            AstNode::Literal(c) => format!("{}", c),
-            AstNode::Concatenation(l, r) => format!("{}{}.", l.as_str(), r.as_str()),
-            AstNode::Quantifier(c, r) => format!("{}{}", r.as_str(), c),
-            AstNode::Terminal => "$".to_string(),
+impl fmt::Display for AstNode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self.kind {
+            Kind::Literal(c) => write!(f, "{}", c),
+            Kind::Concatenation(l, r) => write!(f, "{}{}.", l.to_owned(), r.to_owned()),
+            Kind::Quantifier(c, l) => write!(f, "{}{}", l.to_owned(), c),
+            Kind::Terminal => write!(f, "$"),
         }
     }
 }
