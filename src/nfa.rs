@@ -35,11 +35,9 @@ pub fn asts_to_nfa(asts: Vec<AstNode>) -> Vec<State> {
     let mut states = Vec::new();
     let mut start: usize = 0;
     for ast in asts {
-        let end = start + ast.length;
+        let end = start + ast.length + 1;
         let nfa_frag = ast_to_frag(ast, start, (Some(end), None));
-        if let Some(len) = nfa_frag.outs.0 {
-            start = len;
-        }
+        start = nfa_frag.states.len();
         states.extend(nfa_frag.states);
     }
     states
@@ -263,6 +261,29 @@ mod test {
     }
 
     #[test]
+    fn test_ast_to_frag_outs() {
+        let result = ast_to_frag(
+            AstNode {
+                length: 0,
+                kind: Kind::Concatenation(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Literal('a'),
+                    }),
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Literal('b'),
+                    }),
+                ),
+            },
+            0,
+            (Some(2), None),
+        );
+
+        assert_eq!(result.outs, (Some(2), None));
+    }
+
+    #[test]
     fn test_nfas_to_ast() {
         let first = AstNode {
             length: 3,
@@ -310,7 +331,7 @@ mod test {
                     length: 1,
                     kind: Kind::Quantifier('*'),
                 },
-                (Some(1), Some(3)),
+                (Some(1), Some(4)),
             ),
             State::new(AstNode {
                 length: 1,

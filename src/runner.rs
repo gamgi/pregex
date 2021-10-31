@@ -110,4 +110,47 @@ mod test {
         assert_eq!(matches(&nfa, "ab"), true);
         assert_eq!(matches(&nfa, "bb"), false);
     }
+    #[test]
+    fn test_matches_simple_conditional() {
+        let nfa = vec![
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(3), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Quantifier('?'),
+                },
+                (Some(1), Some(3)),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('c'),
+                },
+                (Some(4), None),
+            ),
+            State::new(AstNode {
+                length: 1,
+                kind: Kind::Terminal,
+            }),
+        ];
+        assert_eq!(matches(&nfa, "a"), false);
+        assert_eq!(matches(&nfa, "ab"), false);
+        assert_eq!(matches(&nfa, "abbc"), false);
+        assert_eq!(matches(&nfa, "ac"), true);
+        assert_eq!(matches(&nfa, "abc"), true);
+        assert_eq!(matches(&nfa, "abcd"), true);
+    }
 }
