@@ -15,6 +15,8 @@ pub enum Kind {
     Quantified(Box<AstNode>, Box<AstNode>),
     Quantifier(char),
     Concatenation(Box<AstNode>, Box<AstNode>),
+    Alternation(Box<AstNode>, Box<AstNode>),
+    Split,
     Terminal,
 }
 
@@ -25,6 +27,8 @@ impl fmt::Display for AstNode {
             Kind::Concatenation(l, r) => write!(f, "{}{}.", l, r),
             Kind::Quantified(r, l) => write!(f, "{}{}", l, r),
             Kind::Quantifier(c) => write!(f, "{}", c),
+            Kind::Alternation(l, r) => write!(f, "{}|{}", l, r),
+            Kind::Split => write!(f, "|"),
             Kind::Terminal => write!(f, "$"),
         }
     }
@@ -33,8 +37,18 @@ impl fmt::Display for AstNode {
 pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
     match pair.as_rule() {
         Rule::Alternation => {
-            // TODO
-            build_ast_from_expr(pair.into_inner().next().unwrap())
+            let mut pair = pair.into_inner();
+            let left = pair.next().unwrap();
+            let left_ast = build_ast_from_expr(left);
+
+            if let Some(right) = pair.next() {
+                let right_ast = build_ast_from_expr(right);
+                return AstNode {
+                    length: left_ast.length + right_ast.length + 1,
+                    kind: Kind::Alternation(Box::new(left_ast), Box::new(right_ast)),
+                };
+            }
+            left_ast
         }
         Rule::Concat => {
             let mut pair = pair.into_inner();
@@ -62,15 +76,15 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
         }
         Rule::Quantified => {
             let mut pair = pair.into_inner();
-            let left = build_ast_from_expr(pair.next().unwrap());
+            let left_ast = build_ast_from_expr(pair.next().unwrap());
             let c = pair.as_str().chars().next().unwrap(); // HACK
-            let quantifier = AstNode {
+            let quantifier_ast = AstNode {
                 length: 1,
                 kind: Kind::Quantifier(c),
             };
             AstNode {
-                length: left.length + quantifier.length,
-                kind: Kind::Quantified(Box::new(quantifier), Box::new(left)),
+                length: left_ast.length + quantifier_ast.length,
+                kind: Kind::Quantified(Box::new(quantifier_ast), Box::new(left_ast)),
             }
         }
         Rule::Literal => {

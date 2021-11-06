@@ -35,7 +35,7 @@ mod test {
     }
 
     #[test]
-    fn test_parser_single_length() {
+    fn test_parser_single_ast() {
         let result = parse("a").unwrap_or(vec![]);
         let expected = vec![
             AstNode {
@@ -51,9 +51,40 @@ mod test {
     }
 
     #[test]
+    fn test_parser_alternation_ast() {
+        let result = parse("a|b").unwrap_or(vec![]);
+        let expected = vec![
+            AstNode {
+                length: 3, // space for split
+                kind: Kind::Alternation(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Literal('a'),
+                    }),
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Literal('b'),
+                    }),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
     fn test_parser_concat_length() {
         let result = parse("ab").unwrap_or(vec![]).first().unwrap().to_owned();
         assert_eq!(result.length, 2);
+    }
+
+    #[test]
+    fn test_parser_alternation() {
+        assert_eq!(ast_as_str(parse("a|b").unwrap()), "a|b$");
+        assert_eq!(ast_as_str(parse("a|b|c").unwrap()), "a|b|c$");
     }
 
     #[test]

@@ -53,6 +53,23 @@ pub fn ast_to_nfa(ast: AstNode, index: usize, out: usize) -> Vec<State> {
 
 fn ast_to_frag(ast: AstNode, index: usize, outs: Outs) -> Frag {
     match ast.kind {
+        Kind::Alternation(left, right) => {
+            let right = ast_to_frag(*right, index + left.length + 1, outs);
+            let left = ast_to_frag(*left, index + 1, outs);
+            let split = ast_to_frag(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Split,
+                },
+                index,
+                (Some(left.start), Some(right.start)),
+            );
+            Frag {
+                states: [split.states, left.states, right.states].concat(),
+                start: split.start,
+                outs: outs,
+            }
+        }
         Kind::Concatenation(left, right) => {
             // left points to start of right and right points to outs
             // left as start
@@ -122,6 +139,13 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs) -> Frag {
             start: index,
             outs: (None, None),
         },
+        Kind::Split => Frag {
+            // split points to left and right
+            // split as start
+            states: vec![State::from(ast, outs)],
+            start: index,
+            outs: outs,
+        },
     }
 }
 
@@ -162,6 +186,51 @@ mod test {
                     kind: Kind::Literal('b'),
                 },
                 (Some(2), None),
+            ),
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_compile_alternation() {
+        let result = ast_to_nfa(
+            AstNode {
+                length: 2,
+                kind: Kind::Alternation(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Literal('a'),
+                    }),
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Literal('b'),
+                    }),
+                ),
+            },
+            0,
+            3,
+        );
+        let expected = vec![
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Split,
+                },
+                (Some(1), Some(2)),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(3), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(3), None),
             ),
         ];
         assert_eq!(result, expected);
