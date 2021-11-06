@@ -72,6 +72,11 @@ mod test {
     }
 
     #[test]
+    fn test_parser_plus() {
+        assert_eq!(ast_as_str(parse("ab+c").unwrap()), "ab+.c.$");
+    }
+
+    #[test]
     fn test_parser_whitespace() {
         assert_eq!(ast_as_str(parse("a c").unwrap()), "a .c.$");
         assert_eq!(ast_as_str(parse(" ab").unwrap()), " a.b.$");
