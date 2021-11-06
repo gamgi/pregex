@@ -58,22 +58,16 @@ mod test {
 
     #[test]
     fn test_parser_concat() {
-        let result = ast_as_str(parse("abc").unwrap());
-        let expected = "ab.c.$".to_string();
-        assert_eq!(result, expected);
+        assert_eq!(ast_as_str(parse("abc").unwrap()), "ab.c.$");
     }
 
     #[test]
     fn test_parser_conditional() {
-        let result = ast_as_str(parse("ab?c").unwrap());
-        let expected = "ab?.c.$".to_string();
-        assert_eq!(result, expected);
+        assert_eq!(ast_as_str(parse("ab?c").unwrap()), "ab?.c.$");
     }
 
     #[test]
     fn test_parser_star() {
-        let result = ast_as_str(parse("ab*c").unwrap());
-        let expected = "ab*.c.$".to_string();
-        assert_eq!(result, expected);
+        assert_eq!(ast_as_str(parse("ab*c").unwrap()), "ab*.c.$");
     }
 }

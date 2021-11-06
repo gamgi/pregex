@@ -109,6 +109,8 @@ mod test {
         ];
         assert_eq!(matches(&nfa, "ab"), true);
         assert_eq!(matches(&nfa, "bb"), false);
+        assert_eq!(matches(&nfa, "abx"), true);
+        assert_eq!(matches(&nfa, "xab"), false);
     }
 
     #[test]
@@ -152,7 +154,8 @@ mod test {
         assert_eq!(matches(&nfa, "abbc"), false);
         assert_eq!(matches(&nfa, "ac"), true);
         assert_eq!(matches(&nfa, "abc"), true);
-        assert_eq!(matches(&nfa, "abcd"), true);
+        assert_eq!(matches(&nfa, "abcx"), true);
+        assert_eq!(matches(&nfa, "xabc"), false);
     }
 
     #[test]
@@ -196,6 +199,7 @@ mod test {
         assert_eq!(matches(&nfa, "abbc"), true);
         assert_eq!(matches(&nfa, "ac"), true);
         assert_eq!(matches(&nfa, "abc"), true);
-        assert_eq!(matches(&nfa, "abcd"), true); // TODO
+        assert_eq!(matches(&nfa, "abcx"), true);
+        assert_eq!(matches(&nfa, "xabc"), false);
     }
 }
