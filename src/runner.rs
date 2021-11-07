@@ -12,18 +12,24 @@ fn add_state(
 ) {
     if let Some(i) = add_idx {
         if !visited.insert(i) {
-            debug!("  skip {}", nfa[i].node.to_string());
+            debug!("    skip {}", nfa[i].node.to_string());
             return;
         }
         let state = &nfa[i];
         if let Kind::Quantifier(c) = state.node.kind {
             // follow outs of quantifier
+            debug!("  split {:?} and {:?}", state.outs.0, state.outs.1);
             add_state(state.outs.0, nfa, visited, current_states);
             add_state(state.outs.1, nfa, visited, current_states);
             return;
+        } else if let Kind::Start = state.node.kind {
+            // follow out of start
+            debug!("  start at {:?}", state.outs.0);
+            add_state(state.outs.0, nfa, visited, current_states);
+            return;
         } else {
             // add state
-            debug!("  add  {}", state.node.to_string());
+            debug!("    add  {}", state.node.to_string());
             current_states.push(state.clone());
         }
     }
@@ -50,12 +56,10 @@ fn step(
     for state in current_states.iter() {
         if let Kind::Terminal = state.node.kind {
             // end
-            // add_state(state.outs.0, nfa, visited, &mut new_states);
             debug!("  match terminal");
             add_state(state.outs.0, nfa, visited, &mut new_states);
         } else if let Kind::Split = state.node.kind {
-            // end
-            // add_state(state.outs.0, nfa, visited, &mut new_states);
+            // split
             debug!("  match split");
             add_state(state.outs.0, nfa, visited, &mut new_states);
             add_state(state.outs.1, nfa, visited, &mut new_states);
@@ -79,6 +83,7 @@ pub fn matches(nfa: &Vec<State>, string: &str) -> bool {
     let mut visited: HashSet<usize> = HashSet::new();
     let mut current_states = Vec::new();
     add_state(Some(0), nfa, &mut visited, &mut current_states);
+    visited.drain(); // ignore start state visists
     for c in string.chars() {
         current_states = step(c, nfa, &mut visited, current_states);
         if visited.contains(&end) {
@@ -152,6 +157,50 @@ mod test {
         ];
         assert_eq!(matches(&nfa, "a"), true);
         assert_eq!(matches(&nfa, "ax"), true);
+        assert_eq!(matches(&nfa, "bx"), true);
+        assert_eq!(matches(&nfa, "xa"), false);
+        assert_eq!(matches(&nfa, "xb"), false);
+    }
+
+    #[test]
+    fn test_matches_conditional_first() {
+        let nfa = vec![
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Start,
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(3), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Quantifier('?'),
+                },
+                (Some(1), Some(3)),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(4), None),
+            ),
+            State::new(AstNode {
+                length: 1,
+                kind: Kind::Terminal,
+            }),
+        ];
+        assert_eq!(matches(&nfa, "a"), false);
+        assert_eq!(matches(&nfa, "b"), true);
+        assert_eq!(matches(&nfa, "ab"), true);
         assert_eq!(matches(&nfa, "bx"), true);
         assert_eq!(matches(&nfa, "xa"), false);
         assert_eq!(matches(&nfa, "xb"), false);

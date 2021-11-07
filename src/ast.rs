@@ -18,6 +18,7 @@ pub enum Kind {
     Alternation(Box<AstNode>, Box<AstNode>),
     Split,
     Terminal,
+    Start,
 }
 
 impl fmt::Display for AstNode {
@@ -30,6 +31,7 @@ impl fmt::Display for AstNode {
             Kind::Alternation(l, r) => write!(f, "{}|{}", l, r),
             Kind::Split => write!(f, "|"),
             Kind::Terminal => write!(f, "$"),
+            Kind::Start => write!(f, "^"),
         }
     }
 }
