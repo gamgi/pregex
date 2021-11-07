@@ -171,6 +171,9 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs) -> Frag {
             start: index,
             outs: outs,
         },
+        Kind::ExactQuantifier(_) => {
+            panic!("exact is not allowed in the AST");
+        }
         Kind::Start => {
             panic!("Start is not allowed in the AST");
         }
