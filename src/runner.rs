@@ -65,6 +65,7 @@ fn step(
             debug!("  match split");
             add_state(state.outs.0, nfa, visited, &mut new_states, false);
             add_state(state.outs.1, nfa, visited, &mut new_states, false);
+            new_states = step(c, nfa, visited, new_states);
         } else if state.node.to_string() == c.to_string() {
             // match
             debug!("  match {} add {:?}", c, state.outs.0);
@@ -133,23 +134,30 @@ mod test {
             State::from(
                 AstNode {
                     length: 1,
+                    kind: Kind::Start,
+                },
+                (Some(1), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
                     kind: Kind::Split,
                 },
-                (Some(1), Some(2)),
+                (Some(2), Some(3)),
             ),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('a'),
                 },
-                (Some(3), None),
+                (Some(4), None),
             ),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('b'),
                 },
-                (Some(3), None),
+                (Some(4), None),
             ),
             State::new(AstNode {
                 length: 1,
@@ -213,30 +221,37 @@ mod test {
             State::from(
                 AstNode {
                     length: 1,
-                    kind: Kind::Literal('a'),
+                    kind: Kind::Start,
                 },
-                (Some(2), None),
+                (Some(1), None),
             ),
             State::from(
                 AstNode {
                     length: 1,
-                    kind: Kind::Literal('b'),
+                    kind: Kind::Literal('a'),
                 },
                 (Some(3), None),
             ),
             State::from(
                 AstNode {
                     length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(4), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
                     kind: Kind::Quantifier('?'),
                 },
-                (Some(1), Some(3)),
+                (Some(2), Some(4)),
             ),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('c'),
                 },
-                (Some(4), None),
+                (Some(5), None),
             ),
             State::new(AstNode {
                 length: 1,
