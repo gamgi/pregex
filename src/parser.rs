@@ -76,6 +76,65 @@ mod test {
     }
 
     #[test]
+    fn test_parser_conditional_ast() {
+        let result = parse("a?").unwrap_or(vec![]);
+        let expected = vec![
+            AstNode {
+                length: 2,
+                kind: Kind::Quantified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Quantifier('?'),
+                    }),
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Literal('a'),
+                    }),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_conditional_first_ast() {
+        let result = parse("a?b").unwrap_or(vec![]);
+        let expected = vec![
+            AstNode {
+                length: 3,
+                kind: Kind::Concatenation(
+                    Box::new(AstNode {
+                        length: 2,
+                        kind: Kind::Quantified(
+                            Box::new(AstNode {
+                                length: 1,
+                                kind: Kind::Quantifier('?'),
+                            }),
+                            Box::new(AstNode {
+                                length: 1,
+                                kind: Kind::Literal('a'),
+                            }),
+                        ),
+                    }),
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Literal('b'),
+                    }),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
     fn test_parser_concat_length() {
         let result = parse("ab").unwrap_or(vec![]).first().unwrap().to_owned();
         assert_eq!(result.length, 2);

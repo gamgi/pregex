@@ -237,6 +237,60 @@ mod test {
     }
 
     #[test]
+    fn test_compile_conditional_first() {
+        let result = ast_to_nfa(
+            AstNode {
+                length: 3,
+                kind: Kind::Concatenation(
+                    Box::new(AstNode {
+                        length: 2,
+                        kind: Kind::Quantified(
+                            Box::new(AstNode {
+                                length: 1,
+                                kind: Kind::Quantifier('?'),
+                            }),
+                            Box::new(AstNode {
+                                length: 1,
+                                kind: Kind::Literal('a'),
+                            }),
+                        ),
+                    }),
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Literal('b'),
+                    }),
+                ),
+            },
+            0,
+            3,
+        );
+        let expected = vec![
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Quantifier('?'),
+                },
+                (Some(0), Some(2)),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(3), None),
+            ),
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
     fn test_compile_conditional() {
         let result = ast_to_nfa(
             AstNode {
