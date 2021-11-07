@@ -50,7 +50,7 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
             }
             left_ast
         }
-        Rule::Concat => {
+        Rule::Concat | Rule::Concats => {
             let mut pair = pair.into_inner();
             let (left, right) = pair.next_tuple().unwrap();
             let left_ast = build_ast_from_expr(left);
@@ -59,20 +59,6 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
                 length: left_ast.length + right_ast.length,
                 kind: Kind::Concatenation(Box::new(left_ast), Box::new(right_ast)),
             }
-        }
-        Rule::ConcatMaybe => {
-            let mut pair = pair.into_inner();
-            let left = pair.next().unwrap();
-            let left_ast = build_ast_from_expr(left);
-
-            if let Some(right) = pair.next() {
-                let right_ast = build_ast_from_expr(right);
-                return AstNode {
-                    length: left_ast.length + right_ast.length,
-                    kind: Kind::Concatenation(Box::new(left_ast), Box::new(right_ast)),
-                };
-            }
-            left_ast
         }
         Rule::Quantified => {
             let mut pair = pair.into_inner();

@@ -1,9 +1,14 @@
 
-Regex 			= _{ SOI ~ Alternation ~ EOI }
-Alternation     =  { ( ConcatMaybe | Concat | Item ) ~ ( "|" ~ Alternation )? }
-ConcatMaybe     =  { ( Concat | Item ) ~ (ConcatMaybe)? }
-Concat          =  { Item ~ Item }
-Item 			= _{ Quantified | Literal }
-Quantified      =  { Literal ~ Quantifier }
-Literal 		=  { ASCII_ALPHA | " " }
-Quantifier	    =  { "+" | "?" | "*" }
+Regex 			= _{ SOI ~ ( Alternation | Expression ) ~ EOI }
+Alternation     =  { Expression ~ ( "|" ~ ( Alternation | Expression ) ) }
+Expression      = _{ Concats | Concat | Factor }
+
+Concats         =  { ( Concat | Factor ) ~ Expression }
+Concat          =  { Factor ~ Factor }
+Group           = _{ "(" ~ ( Alternation | Expression ) ~ ")" }
+
+Factor          = _{ Quantified | Group | Token }
+Token           = _{ Literal }
+Quantified      =  { ( Token | Group ) ~ Quantifier }
+Literal         =  { ASCII_ALPHANUMERIC | " " }
+Quantifier      =  { "+" | "?" | "*" }

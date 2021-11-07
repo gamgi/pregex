@@ -10,14 +10,14 @@ pub fn parse(source: &str) -> std::result::Result<Vec<AstNode>, pest::error::Err
     let pairs = RegexParser::parse(Rule::Regex, source)?;
 
     for pair in pairs {
-        if let Rule::Alternation = pair.as_rule() {
-            let node = build_ast_from_expr(pair);
-            ast.push(node);
-        } else if let Rule::EOI = pair.as_rule() {
+        if let Rule::EOI = pair.as_rule() {
             ast.push(AstNode {
                 length: 0,
                 kind: Kind::Terminal,
             });
+        } else {
+            let node = build_ast_from_expr(pair);
+            ast.push(node);
         }
     }
     Ok(ast)
@@ -112,5 +112,15 @@ mod test {
         assert_eq!(ast_as_str(parse("a c").unwrap()), "a .c.$");
         assert_eq!(ast_as_str(parse(" ab").unwrap()), " a.b.$");
         assert_eq!(ast_as_str(parse("ab ").unwrap()), "ab. .$");
+    }
+
+    #[test]
+    fn test_parser_parentheses() {
+        assert_eq!(ast_as_str(parse("(a)").unwrap()), "a$");
+        assert_eq!(ast_as_str(parse("(ab)c").unwrap()), "ab.c.$");
+        assert_eq!(ast_as_str(parse("a(bc)").unwrap()), "abc..$");
+        assert_eq!(ast_as_str(parse("(a(bc))d").unwrap()), "abc..d.$");
+        assert_eq!(ast_as_str(parse("(a|b)").unwrap()), "a|b$");
+        assert_eq!(ast_as_str(parse("(a|b)c").unwrap()), "a|bc.$"); // TODO not a great representation
     }
 }
