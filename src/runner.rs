@@ -9,9 +9,11 @@ fn add_state(
     nfa: &Vec<State>,
     visited: &mut HashSet<usize>,
     current_states: &mut Vec<State>,
+    force: bool,
 ) {
     if let Some(i) = add_idx {
-        if !visited.insert(i) {
+        // add i to visited and skip adding if (exists and not forced)
+        if !visited.insert(i) && !force {
             debug!("    skip {}", nfa[i].node.to_string());
             return;
         }
@@ -19,13 +21,13 @@ fn add_state(
         if let Kind::Quantifier(c) = state.node.kind {
             // follow outs of quantifier
             debug!("  split {:?} and {:?}", state.outs.0, state.outs.1);
-            add_state(state.outs.0, nfa, visited, current_states);
-            add_state(state.outs.1, nfa, visited, current_states);
+            add_state(state.outs.0, nfa, visited, current_states, force);
+            add_state(state.outs.1, nfa, visited, current_states, force);
             return;
         } else if let Kind::Start = state.node.kind {
             // follow out of start
             debug!("  start at {:?}", state.outs.0);
-            add_state(state.outs.0, nfa, visited, current_states);
+            add_state(state.outs.0, nfa, visited, current_states, force);
             return;
         } else {
             // add state
@@ -57,17 +59,16 @@ fn step(
         if let Kind::Terminal = state.node.kind {
             // end
             debug!("  match terminal");
-            add_state(state.outs.0, nfa, visited, &mut new_states);
+            add_state(state.outs.0, nfa, visited, &mut new_states, false);
         } else if let Kind::Split = state.node.kind {
             // split
             debug!("  match split");
-            add_state(state.outs.0, nfa, visited, &mut new_states);
-            add_state(state.outs.1, nfa, visited, &mut new_states);
-            new_states = step(c, nfa, visited, new_states);
+            add_state(state.outs.0, nfa, visited, &mut new_states, false);
+            add_state(state.outs.1, nfa, visited, &mut new_states, false);
         } else if state.node.to_string() == c.to_string() {
             // match
             debug!("  match {} add {:?}", c, state.outs.0);
-            add_state(state.outs.0, nfa, visited, &mut new_states);
+            add_state(state.outs.0, nfa, visited, &mut new_states, true);
         } else {
             debug!("  {} != {}", state.node.to_string(), c.to_string());
         }
@@ -82,8 +83,8 @@ pub fn matches(nfa: &Vec<State>, string: &str) -> bool {
     let end = nfa.len() - 1;
     let mut visited: HashSet<usize> = HashSet::new();
     let mut current_states = Vec::new();
-    add_state(Some(0), nfa, &mut visited, &mut current_states);
-    visited.drain(); // ignore start state visists
+    add_state(Some(0), nfa, &mut visited, &mut current_states, true);
+    // visited.drain(); // ignore start state visists
     for c in string.chars() {
         current_states = step(c, nfa, &mut visited, current_states);
         if visited.contains(&end) {
