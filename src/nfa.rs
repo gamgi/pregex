@@ -150,8 +150,32 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs) -> Frag {
                 }
             }
         }
-        _ => {
-            panic!("{} is not a valid quantifier", ast);
+        Kind::Quantifier(_) => Frag {
+            // quantifier points to outs
+            // quantifier as start
+            states: vec![State::from(ast, outs)],
+            start: index,
+            outs: outs,
+        },
+        Kind::Terminal => Frag {
+            // terminal points to none
+            // terminal as start
+            states: vec![State::new(ast)],
+            start: index,
+            outs: (None, None),
+        },
+        Kind::Split => Frag {
+            // split points to left and right
+            // split as start
+            states: vec![State::from(ast, outs)],
+            start: index,
+            outs: outs,
+        },
+        Kind::ExactQuantifier(_) => {
+            panic!("exact is not allowed in the AST");
+        }
+        Kind::Start => {
+            panic!("Start is not allowed in the AST");
         }
     }
 }
