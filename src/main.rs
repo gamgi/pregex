@@ -1,4 +1,5 @@
 #![allow(unused_imports)]
+#![feature(hash_drain_filter)]
 
 extern crate pest;
 #[macro_use]
@@ -18,6 +19,7 @@ mod config;
 mod nfa;
 mod parser;
 mod runner;
+mod state;
 use config::{parse_options, PATTERN_OPTION, STRING_OPTION};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -38,6 +40,7 @@ fn main() -> Result<(), String> {
     let asts = parser::parse(&config.pattern).unwrap_or_else(|error| {
         panic!("{}", error);
     });
+    // println!("{:?}", asts[0].to_string());
     let nfa = nfa::asts_to_nfa(asts);
     match runner::matches(&nfa, &config.string) {
         true => println!("{}", config.string),
