@@ -3,20 +3,20 @@ use crate::parser::parse;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct State {
-    pub node: AstNode,
+    pub kind: Kind,
     pub outs: Outs,
 }
 
 impl State {
     pub fn new(node: AstNode) -> State {
         State {
-            node: node,
+            kind: node.kind,
             outs: (None, None),
         }
     }
     pub fn from(node: AstNode, outs: Outs) -> State {
         State {
-            node: node,
+            kind: node.kind,
             outs: outs,
         }
     }
@@ -151,7 +151,7 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs) -> Frag {
             }
         }
         _ => {
-            panic!("{} is not a valid quantifier", quantifier);
+            panic!("{} is not a valid quantifier", ast);
         }
     }
 }
@@ -512,10 +512,7 @@ mod test {
         };
         let expected = vec![
             State {
-                node: AstNode {
-                    length: 1,
-                    kind: Kind::Start,
-                },
+                kind: Kind::Start,
                 outs: (Some(1), None),
             },
             State::from(
@@ -555,10 +552,7 @@ mod test {
         let result = asts_to_nfa(asts);
         let expected = vec![
             State {
-                node: AstNode {
-                    length: 1,
-                    kind: Kind::Start,
-                },
+                kind: Kind::Start,
                 outs: (Some(1), None),
             },
             State::from(
@@ -603,10 +597,7 @@ mod test {
         let result = asts_to_nfa(asts);
         let expected = vec![
             State {
-                node: AstNode {
-                    length: 1,
-                    kind: Kind::Start,
-                },
+                kind: Kind::Start,
                 outs: (Some(2), None),
             },
             State::from(

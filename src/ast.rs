@@ -22,9 +22,9 @@ pub enum Kind {
     Start,
 }
 
-impl fmt::Display for AstNode {
+impl fmt::Display for Kind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self.kind {
+        match &self {
             Kind::Literal(c) => write!(f, "{}", c),
             Kind::Concatenation(l, r) => write!(f, "{}{}.", l, r),
             Kind::Quantified(r, l) => write!(f, "{}{}", l, r),
@@ -35,6 +35,12 @@ impl fmt::Display for AstNode {
             Kind::Terminal => write!(f, "$"),
             Kind::Start => write!(f, "^"),
         }
+    }
+}
+
+impl fmt::Display for AstNode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.kind.fmt(f)
     }
 }
 

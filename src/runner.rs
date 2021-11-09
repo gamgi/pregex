@@ -14,24 +14,24 @@ fn add_state(
     if let Some(i) = add_idx {
         // add i to visited and skip adding if (exists and not forced)
         if !visited.insert(i) && !force {
-            debug!("    skip {}", nfa[i].node.to_string());
+            debug!("    skip {}", nfa[i].kind.to_string()); // TODO a.get(b)
             return;
         }
         let state = &nfa[i];
-        if let Kind::Quantifier(c) = state.node.kind {
+        if let Kind::Quantifier(c) = state.kind {
             // follow outs of quantifier
             debug!("  split {:?} and {:?}", state.outs.0, state.outs.1);
             add_state(state.outs.0, nfa, visited, current_states, force);
             add_state(state.outs.1, nfa, visited, current_states, force);
             return;
-        } else if let Kind::Start = state.node.kind {
+        } else if let Kind::Start = state.kind {
             // follow out of start
             debug!("  start at {:?}", state.outs.0);
             add_state(state.outs.0, nfa, visited, current_states, force);
             return;
         } else {
             // add state
-            debug!("    add  {}", state.node.to_string());
+            debug!("    add  {}", state.kind.to_string());
             current_states.push(state.clone());
         }
     }
@@ -50,28 +50,28 @@ fn step(
             "  current_states {:?}",
             current_states
                 .iter()
-                .map(|s| s.node.to_string())
+                .map(|s| s.kind.to_string())
                 .collect::<Vec<String>>()
         );
     }
 
     for state in current_states.iter() {
-        if let Kind::Terminal = state.node.kind {
+        if let Kind::Terminal = state.kind {
             // end
             debug!("  match terminal");
             add_state(state.outs.0, nfa, visited, &mut new_states, false);
-        } else if let Kind::Split = state.node.kind {
+        } else if let Kind::Split = state.kind {
             // split
             debug!("  match split");
             add_state(state.outs.0, nfa, visited, &mut new_states, false);
             add_state(state.outs.1, nfa, visited, &mut new_states, false);
             new_states = step(c, nfa, visited, new_states);
-        } else if state.node.to_string() == c.to_string() {
+        } else if state.kind.to_string() == c.to_string() {
             // match
             debug!("  match {} add {:?}", c, state.outs.0);
             add_state(state.outs.0, nfa, visited, &mut new_states, true);
         } else {
-            debug!("  {} != {}", state.node.to_string(), c.to_string());
+            debug!("  {} != {}", state.kind.to_string(), c.to_string());
         }
     }
     new_states

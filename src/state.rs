@@ -26,11 +26,11 @@ impl NfaState<'_> {
         if let Some(state) = self.nfa.get(i) {
             let is_previously_visited = !self.visited.insert(i);
             if is_previously_visited && !force {
-                debug!("    skip {}", self.nfa[i].node.to_string());
+                debug!("    skip {}", self.nfa[i].kind.to_string());
                 return;
             }
             // println!("{:?}", state.node.kind);
-            match state.node.kind {
+            match state.kind {
                 Kind::Quantifier(_) | Kind::Start => {
                     // follow outs of quantifier
                     self.add_state(state.outs.0, force);
@@ -39,7 +39,7 @@ impl NfaState<'_> {
                 }
                 _ => {
                     // add state
-                    debug!("    add  {}", state.node.to_string());
+                    debug!("    add  {}", state.kind.to_string());
                     self.update_state(i, 1.0);
                 }
             }
