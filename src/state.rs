@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 
 type ActiveState = (char, f32, u32); // (c, p, visits)
 
-struct NfaState<'a> {
+pub struct NfaState<'a> {
     nfa: &'a Vec<State>,
     visited: HashSet<usize>,
     pub current_states: HashMap<usize, ActiveState>,

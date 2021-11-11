@@ -1,97 +1,22 @@
 #![allow(dead_code, unused_imports, unused_mut, unused_variables)]
 use crate::ast::{AstNode, Kind};
 use crate::nfa::State;
+use crate::state::NfaState;
 use log::Level;
 use std::collections::HashSet;
-
-fn add_state(
-    add_idx: Option<usize>,
-    nfa: &Vec<State>,
-    visited: &mut HashSet<usize>,
-    current_states: &mut Vec<State>,
-    force: bool,
-) {
-    if let Some(i) = add_idx {
-        // add i to visited and skip adding if (exists and not forced)
-        if !visited.insert(i) && !force {
-            debug!("    skip {}", nfa[i].kind.to_string()); // TODO a.get(b)
-            return;
-        }
-        let state = &nfa[i];
-        if let Kind::Quantifier(c) = state.kind {
-            // follow outs of quantifier
-            debug!("  split {:?} and {:?}", state.outs.0, state.outs.1);
-            add_state(state.outs.0, nfa, visited, current_states, force);
-            add_state(state.outs.1, nfa, visited, current_states, force);
-            return;
-        } else if let Kind::Start = state.kind {
-            // follow out of start
-            debug!("  start at {:?}", state.outs.0);
-            add_state(state.outs.0, nfa, visited, current_states, force);
-            return;
-        } else {
-            // add state
-            debug!("    add  {}", state.kind.to_string());
-            current_states.push(state.clone());
-        }
-    }
-}
-
-fn step(
-    c: char,
-    nfa: &Vec<State>,
-    visited: &mut HashSet<usize>,
-    current_states: Vec<State>,
-) -> Vec<State> {
-    let mut new_states = Vec::new();
-    if log_enabled!(Level::Debug) {
-        debug!("step {}", c);
-        debug!(
-            "  current_states {:?}",
-            current_states
-                .iter()
-                .map(|s| s.kind.to_string())
-                .collect::<Vec<String>>()
-        );
-    }
-
-    for state in current_states.iter() {
-        if let Kind::Terminal = state.kind {
-            // end
-            debug!("  match terminal");
-            add_state(state.outs.0, nfa, visited, &mut new_states, false);
-        } else if let Kind::Split = state.kind {
-            // split
-            debug!("  match split");
-            add_state(state.outs.0, nfa, visited, &mut new_states, false);
-            add_state(state.outs.1, nfa, visited, &mut new_states, false);
-            new_states = step(c, nfa, visited, new_states);
-        } else if state.kind.to_string() == c.to_string() {
-            // match
-            debug!("  match {} add {:?}", c, state.outs.0);
-            add_state(state.outs.0, nfa, visited, &mut new_states, true);
-        } else {
-            debug!("  {} != {}", state.kind.to_string(), c.to_string());
-        }
-    }
-    new_states
-}
 
 pub fn matches(nfa: &Vec<State>, string: &str) -> bool {
     if nfa.len() == 0 {
         return true;
     }
-    let end = nfa.len() - 1;
-    let mut visited: HashSet<usize> = HashSet::new();
-    let mut current_states = Vec::new();
-    add_state(Some(0), nfa, &mut visited, &mut current_states, true);
-    // visited.drain(); // ignore start state visists
+    let mut state = NfaState::new(nfa);
+    state.init_state(Some(0), true);
+
+    // step through string
     for c in string.chars() {
-        current_states = step(c, nfa, &mut visited, current_states);
-        if visited.contains(&end) {
+        if state.step(c) {
             return true;
         }
-        visited.drain();
     }
     false
 }
