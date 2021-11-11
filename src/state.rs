@@ -1,15 +1,15 @@
+#![allow(dead_code, unused_variables)]
 use crate::ast::{AstNode, Kind};
 use crate::nfa::State;
 use std::collections::{HashMap, HashSet};
 
-type ActiveState = (f32, u32); // (p, visits)
+type ActiveState = (char, f32, u32); // (c, p, visits)
 
 struct NfaState<'a> {
     nfa: &'a Vec<State>,
     visited: HashSet<usize>,
     pub current_states: HashMap<usize, ActiveState>,
 }
-const NEW_ACTIVE_STATE: ActiveState = (1.0, 0);
 
 impl NfaState<'_> {
     pub fn new(nfa: &Vec<State>) -> NfaState {
@@ -18,6 +18,12 @@ impl NfaState<'_> {
             current_states: HashMap::new(),
             visited: HashSet::new(),
         };
+    }
+
+    pub fn add_states(&mut self, idxs: Vec<Option<usize>>, force: bool) {
+        for i in idxs.into_iter() {
+            self.add_state(i, force);
+        }
     }
 
     pub fn add_state(&mut self, idx: Option<usize>, force: bool) {
@@ -29,9 +35,9 @@ impl NfaState<'_> {
                 debug!("    skip {}", self.nfa[i].kind.to_string());
                 return;
             }
-            // println!("{:?}", state.node.kind);
+
             match state.kind {
-                Kind::Quantifier(_) | Kind::Start => {
+                Kind::Quantifier(_) | Kind::Start | Kind::Split => {
                     // follow outs of quantifier
                     self.add_state(state.outs.0, force);
                     self.add_state(state.outs.1, force);
@@ -46,18 +52,51 @@ impl NfaState<'_> {
         }
     }
 
+    pub fn init_state(&mut self, idx: Option<usize>, force: bool) {
+        self.add_state(idx, force);
+        self.visited.drain();
+    }
+
     fn update_state(&mut self, i: usize, _p: f32) {
-        let entry = self.current_states.entry(i).or_insert(NEW_ACTIVE_STATE);
-        let (p, count) = entry;
-        *entry = (*p, *count + 1);
+        if let Kind::Literal(c) = self.nfa[i].kind {
+            let entry = self.current_states.entry(i).or_insert((c, 1.0, 0));
+            let (c, p, count) = entry;
+            *entry = (*c, *p, *count + 1);
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
     #[test]
-    fn test_state_add() {
+    fn test_state_init() {
+        let nfa = vec![
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Split,
+                },
+                (Some(1), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(2), None),
+            ),
+        ];
+        let mut state = NfaState::new(&nfa);
+        state.init_state(Some(0), true);
+        assert_eq!(state.current_states.len(), 1);
+        assert_eq!(*state.current_states.get(&1).unwrap(), ('a', 1.0, 1));
+        assert_eq!(state.visited.len(), 0);
+    }
+
+    #[test]
+    fn test_add_state() {
         let nfa = vec![
             State::from(
                 AstNode {
@@ -77,6 +116,7 @@ mod test {
         let mut state = NfaState::new(&nfa);
         state.add_state(Some(0), true);
         state.add_state(Some(0), true);
-        assert_eq!(*state.current_states.get(&0).unwrap(), (1.0, 2));
+        assert_eq!(*state.current_states.get(&0).unwrap(), ('a', 1.0, 2));
+        assert_eq!(state.visited.len(), 1);
     }
 }
