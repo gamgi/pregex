@@ -100,55 +100,7 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs) -> Frag {
             outs: outs,
         },
         Kind::Quantified(quantifier, quantified) => {
-            let c = if let Kind::Quantifier(c) = quantifier.kind {
-                c
-            } else {
-                panic!("invalid quantifier {}", quantifier);
-            };
-
-            match c {
-                '?' => {
-                    /*
-                    quantifier points to right and outs.0
-                    right points to outs.0
-                    quantifier as start
-                    */
-                    let quantifier_start = index + quantified.length;
-                    let left = ast_to_frag(*quantified, index, outs);
-
-                    let quantifier =
-                        ast_to_frag(*quantifier, quantifier_start, (Some(left.start), outs.0));
-
-                    return Frag {
-                        states: [left.states, quantifier.states].concat(),
-                        start: quantifier.start,
-                        outs: outs,
-                    };
-                }
-                _ => {
-                    /*
-                    left points to quantifier for * and +
-                    quantifier points to left and outs.0
-                    left as start for +
-                    quantifier as start for rest
-                    */
-                    let quantifier_start = index + quantified.length;
-                    let left = ast_to_frag(*quantified, index, (Some(quantifier_start), None));
-
-                    let quantifier =
-                        ast_to_frag(*quantifier, quantifier_start, (Some(index), outs.0));
-                    let start = match c {
-                        '+' => left.start,
-                        _ => quantifier.start,
-                    };
-
-                    return Frag {
-                        states: [left.states, quantifier.states].concat(),
-                        start: start,
-                        outs: outs,
-                    };
-                }
-            }
+            quantifier_to_frag(*quantifier, *quantified, index, outs)
         }
         Kind::Quantifier(_) => Frag {
             // quantifier points to outs
@@ -173,6 +125,59 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs) -> Frag {
         },
         _ => {
             panic!("{} is not allowed in the AST", ast.kind.to_string());
+        }
+    }
+}
+
+fn quantifier_to_frag(quantifier: AstNode, quantified: AstNode, index: usize, outs: Outs) -> Frag {
+    match quantifier.kind {
+        Kind::Quantifier(c) => {
+            match c {
+                '?' => {
+                    /*
+                    quantifier points to quantified and outs.0
+                    quantified points to outs.0
+                    quantifier as start
+                    */
+                    let quantifier_start = index + quantified.length;
+                    let left = ast_to_frag(quantified, index, outs);
+
+                    let quantifier =
+                        ast_to_frag(quantifier, quantifier_start, (Some(left.start), outs.0));
+
+                    return Frag {
+                        states: [left.states, quantifier.states].concat(),
+                        start: quantifier.start,
+                        outs: outs,
+                    };
+                }
+                _ => {
+                    /*
+                    quantified points to quantifier for * and +
+                    quantifier points to quantified and outs.0
+                    quantified as start for +
+                    quantifier as start for rest
+                    */
+                    let quantifier_start = index + quantified.length;
+                    let left = ast_to_frag(quantified, index, (Some(quantifier_start), None));
+
+                    let quantifier =
+                        ast_to_frag(quantifier, quantifier_start, (Some(index), outs.0));
+                    let start = match c {
+                        '+' => left.start,
+                        _ => quantifier.start,
+                    };
+
+                    return Frag {
+                        states: [left.states, quantifier.states].concat(),
+                        start: start,
+                        outs: outs,
+                    };
+                }
+            }
+        }
+        _ => {
+            panic!("{} is not a valid quantifier", quantifier.kind.to_string());
         }
     }
 }
