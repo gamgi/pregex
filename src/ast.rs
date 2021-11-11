@@ -91,7 +91,6 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
             kind: Kind::Terminal,
         },
         Rule::ShortQuantifier => {
-            let pair = pair.into_inner();
             let c = pair.as_str().chars().next().unwrap();
             AstNode {
                 length: 1,
