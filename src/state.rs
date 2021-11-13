@@ -1,9 +1,10 @@
 #![allow(dead_code, unused_variables)]
 use crate::ast::{AstNode, Kind};
 use crate::nfa::State;
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, PartialOrd)]
 pub enum Dist {
     Constant(f32),
     ExactlyTimes(u32),
@@ -31,14 +32,14 @@ impl NfaState<'_> {
     pub fn update_states_counts(&mut self, idxs: &Vec<Option<usize>>) {
         for idx in idxs.iter() {
             if let Some(i) = idx {
-                self.update_state(*i, 1.0, true);
+                self.update_state(*i, 0.0, true);
             }
         }
     }
 
     pub fn add_states(&mut self, idxs: Vec<Option<usize>>, force: bool) -> bool {
         idxs.into_iter()
-            .map(|idx| self.add_state(idx, force))
+            .map(|idx| self.add_state(idx, force, 1.0)) // TODO what is p
             .any(|is_terminal| is_terminal == true)
     }
 
@@ -49,7 +50,27 @@ impl NfaState<'_> {
         0
     }
 
-    pub fn add_state(&mut self, idx: Option<usize>, force: bool) -> bool {
+    fn evaluate_state(&mut self, i: usize) -> (f32, f32) {
+        // TODO should we get state_params.1 as p or pass it as arg?
+        if let Some((dist, p0, n)) = self.state_params.get(&i) {
+            return match dist {
+                Dist::Constant(p) => (p * p0, p * p0),
+                Dist::ExactlyTimes(match_n) => {
+                    if n == match_n {
+                        (0.0, *p0)
+                    } else if n < match_n {
+                        (*p0, 0.0)
+                    } else {
+                        (0.0, 0.0)
+                    }
+                }
+            };
+        }
+        (0.0, 0.0) // TODO
+    }
+
+    pub fn add_state(&mut self, idx: Option<usize>, force: bool, p: f32) -> bool {
+        // TODO return p instead of bool
         let i = if let Some(i) = idx { i } else { return false };
 
         if let Some(state) = self.nfa.get(i) {
@@ -60,24 +81,33 @@ impl NfaState<'_> {
             }
 
             match state.kind {
-                Kind::Terminal => return true,
+                Kind::Terminal => {
+                    self.update_state(i, p, false);
+                    return true;
+                }
                 Kind::Quantifier(_) | Kind::Start | Kind::Split => {
                     // follow outs of quantifier
-                    self.add_state(state.outs.0, force);
-                    self.add_state(state.outs.1, force);
+                    let mut result = false;
+                    result |= self.add_state(state.outs.0, force, p);
+                    result |= self.add_state(state.outs.1, force, p);
+                    return result;
                 }
                 Kind::ExactQuantifier(match_n) => {
                     let n = self.get_count(i);
+                    let (p0, p1) = self.evaluate_state(i);
+                    println!(
+                        "  exq {} of {} {} {} ({} {})",
+                        n, match_n, state.kind, p, p0, p1
+                    );
 
-                    if n == match_n {
-                        self.add_state(state.outs.1, true);
-                    } else if n < match_n {
-                        self.add_state(state.outs.0, true);
-                    }
+                    let mut result = false;
+                    result |= self.add_state(state.outs.1, true, p1);
+                    result |= self.add_state(state.outs.0, true, p0);
+                    return result;
                 }
                 _ => {
                     // add state
-                    self.update_state(i, 1.0, false);
+                    self.update_state(i, p, false);
                 }
             }
         }
@@ -85,7 +115,7 @@ impl NfaState<'_> {
     }
 
     pub fn init_state(&mut self, idx: Option<usize>, force: bool) {
-        self.add_state(idx, force);
+        self.add_state(idx, force, 1.0);
         self.visited.drain();
     }
 
@@ -93,11 +123,12 @@ impl NfaState<'_> {
         println!("step {}", token);
         debug!("step {}", token);
         let mut new_states: Vec<Option<usize>> = Vec::new();
+        let mut result = false;
 
         for i in self.current_states.iter() {
             let state = &self.nfa[*i];
             match state.kind {
-                Kind::Terminal => return true,
+                Kind::Terminal => result = true,
                 Kind::Literal(match_token) => {
                     if match_token == token {
                         println!("  match {}", token);
@@ -110,41 +141,43 @@ impl NfaState<'_> {
         }
 
         self.current_states.drain();
-        let result = self.update_states_counts(&new_states);
+        self.update_states_counts(&new_states);
         println!("  flush {:?}", self.state_params);
         debug!("  flush");
-        let result = self.add_states(new_states, false);
+        result |= self.add_states(new_states, false);
         self.visited.drain();
+        println!("  {}", result);
         return result;
     }
 
-    fn update_state(&mut self, i: usize, _p: f32, count: bool) {
-        debug!("  update {} {}", i, count);
-        println!("  update {} {}", i, count);
+    fn update_state(&mut self, i: usize, p: f32, count: bool) {
+        debug!("  update {} {} {}", i, p, count);
+        println!("  update {} {} {}", i, p, count);
 
         match self.nfa[i].kind {
-            Kind::Literal(_) => {
-                self.current_states.insert(i);
-                let entry = self
-                    .state_params
-                    .entry(i)
-                    .or_insert((Dist::Constant(1.0), 1.0, 0));
-                // let (prob, p, count) = entry;
-                // *entry = (*prob, *p, *count + 1);
-                if count {
-                    entry.2 += 1;
-                }
-            }
             Kind::ExactQuantifier(n) => {
                 let entry = self
                     .state_params
                     .entry(i)
-                    .or_insert((Dist::Constant(1.0), 1.0, 0));
+                    .or_insert((Dist::ExactlyTimes(n), 0.0, 0));
+                entry.1 = f32::max(entry.1, p);
                 if count {
                     entry.2 += 1;
                 }
             }
-            _ => {}
+            _ => {
+                self.current_states.insert(i);
+                let entry = self
+                    .state_params
+                    .entry(i)
+                    .or_insert((Dist::Constant(1.0), 0.0, 0));
+                // let (prob, p, count) = entry;
+                // *entry = (*prob, *p, *count + 1);
+                entry.1 = f32::max(entry.1, p);
+                if count {
+                    entry.2 += 1;
+                }
+            }
         }
     }
 }
@@ -200,8 +233,8 @@ mod test {
             ),
         ];
         let mut state = NfaState::new(&nfa);
-        state.add_state(Some(0), true);
-        state.add_state(Some(0), true);
+        state.add_state(Some(0), true, 1.0);
+        state.add_state(Some(0), true, 1.0);
         // TODO test update_states_counts
         // assert_eq!(
         //     *state.state_params.get(&0).unwrap(),
@@ -322,5 +355,43 @@ mod test {
         );
         assert_eq!(state.step('a'), true);
         assert_eq!(state.visited.len(), 0);
+    }
+
+    #[test]
+    fn test_state_probs() {
+        let nfa = vec![
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(1), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::ExactQuantifier(2),
+                },
+                (Some(0), Some(2)),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Terminal,
+                },
+                (None, None),
+            ),
+        ];
+        let mut state = NfaState::new(&nfa);
+        state.init_state(Some(0), true);
+        state.step('a');
+        assert_eq!(state.step('a'), true);
+        let probs = state
+            .state_params
+            .keys()
+            .sorted()
+            .map(|k| state.state_params[k].1)
+            .collect::<Vec<f32>>();
+        assert_eq!(probs, vec![1.0, 1.0, 1.0]);
     }
 }
