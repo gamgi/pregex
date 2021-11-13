@@ -14,7 +14,7 @@ pub enum Kind {
     Literal(char),
     Quantified(Box<AstNode>, Box<AstNode>),
     Quantifier(char),
-    ExactQuantifier(usize),
+    ExactQuantifier(u32),
     Concatenation(Box<AstNode>, Box<AstNode>),
     Alternation(Box<AstNode>, Box<AstNode>),
     Split,
@@ -100,8 +100,7 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
         Rule::ExactQuantifier => {
             let pair = pair.into_inner().next().unwrap();
             // uses str::parse to convert to appropriate Rust type
-            let n: usize = pair.as_str().parse().unwrap();
-            println!("{:?}", n);
+            let n: u32 = pair.as_str().parse().unwrap();
             AstNode {
                 length: 1,
                 kind: Kind::ExactQuantifier(n),

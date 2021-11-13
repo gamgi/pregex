@@ -15,6 +15,7 @@ pub fn matches(nfa: &Vec<State>, string: &str) -> bool {
     // step through string
     for c in string.chars() {
         if state.step(c) {
+            debug!("match");
             return true;
         }
     }
@@ -280,5 +281,49 @@ mod test {
         assert_eq!(matches(&nfa, "abc"), true);
         assert_eq!(matches(&nfa, "abcx"), true);
         assert_eq!(matches(&nfa, "xabc"), false);
+    }
+
+    #[test]
+    fn test_matches_exact_quantifier() {
+        let nfa = vec![
+            State {
+                kind: Kind::Start,
+                outs: (Some(1), None),
+            },
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::ExactQuantifier(2),
+                },
+                (Some(1), Some(3)),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(4), None),
+            ),
+            State::new(AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            }),
+        ];
+        assert_eq!(matches(&nfa, "a"), false);
+        assert_eq!(matches(&nfa, "aa"), false);
+        assert_eq!(matches(&nfa, "ab"), false);
+        assert_eq!(matches(&nfa, "aba"), false);
+        assert_eq!(matches(&nfa, "aab"), true);
+        assert_eq!(matches(&nfa, "abb"), false);
+        assert_eq!(matches(&nfa, "aaab"), false);
+        assert_eq!(matches(&nfa, "xaab"), false);
+        assert_eq!(matches(&nfa, "aabx"), true);
     }
 }
