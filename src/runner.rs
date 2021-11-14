@@ -322,7 +322,7 @@ mod test {
         assert_eq!(matches(&nfa, "aba"), false);
         assert_eq!(matches(&nfa, "aab"), true);
         assert_eq!(matches(&nfa, "abb"), false);
-        // assert_eq!(matches(&nfa, "aaab"), false);
+        assert_eq!(matches(&nfa, "aaab"), false);
         assert_eq!(matches(&nfa, "xaab"), false);
         assert_eq!(matches(&nfa, "aabx"), true);
     }

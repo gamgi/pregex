@@ -166,7 +166,8 @@ impl NfaState<'_> {
         match state.kind {
             Kind::ExactQuantifier(n) => {
                 let mut params = self.get_params(i);
-                params.1 = f32::max(params.1, p);
+                // params.1 = f32::max(params.1, p);
+                params.1 = p;
                 if count {
                     params.2 += 1;
                 }
@@ -174,7 +175,8 @@ impl NfaState<'_> {
             _ => {
                 self.current_states.insert(i);
                 let mut params = self.get_params(i);
-                params.1 = f32::max(params.1, p);
+                // params.1 = f32::max(params.1, p);
+                params.1 = p;
                 if count {
                     params.2 += 1;
                 }
@@ -386,6 +388,14 @@ mod test {
         let mut state = NfaState::new(&nfa);
         state.init_state(Some(0), true);
         assert_eq!(state.step('a'), 0.0);
+        let probs = state
+            .state_params
+            .keys()
+            .sorted()
+            .map(|k| state.state_params[k].1)
+            .collect::<Vec<f32>>();
+        assert_eq!(probs, vec![1.0, 0.0, 0.0]);
+
         assert_eq!(state.step('a'), 1.0);
         let probs = state
             .state_params
@@ -393,6 +403,6 @@ mod test {
             .sorted()
             .map(|k| state.state_params[k].1)
             .collect::<Vec<f32>>();
-        assert_eq!(probs, vec![1.0, 0.0, 1.0]);
+        assert_eq!(probs, vec![0.0, 0.0, 1.0]);
     }
 }
