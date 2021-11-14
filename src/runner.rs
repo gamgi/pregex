@@ -14,7 +14,7 @@ pub fn matches(nfa: &Vec<State>, string: &str) -> bool {
 
     // step through string
     for c in string.chars() {
-        if state.step(c) {
+        if state.step(c) == 1.0 {
             debug!("match");
             return true;
         }
