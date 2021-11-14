@@ -176,7 +176,7 @@ fn quantifier_to_frag(quantifier: AstNode, quantified: AstNode, index: usize, ou
                 }
             }
         }
-        Kind::ExactQuantifier(n) => {
+        Kind::ExactQuantifier(_) => {
             /*
             left points to quantifier
             quantifier points to left (less) and outs.0 (exact)

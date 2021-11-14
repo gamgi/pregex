@@ -1,22 +1,15 @@
 #![allow(dead_code, unused_variables)]
 use crate::ast::{AstNode, Kind};
+use crate::distribution::{evaluate, Dist, StateParams};
 use crate::nfa::State;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
-
-#[derive(Debug, PartialEq, PartialOrd)]
-pub enum Dist {
-    Constant(f32),
-    ExactlyTimes(u32),
-}
-
-type ActiveState = (Dist, f32, u32); // (c, p, visits)
 
 pub struct NfaState<'a> {
     nfa: &'a Vec<State>,
     visited: HashSet<usize>,
     pub current_states: HashSet<usize>,
-    state_params: HashMap<usize, ActiveState>,
+    state_params: HashMap<usize, StateParams>,
 }
 
 fn find_max<'a, I>(vals: I) -> f32
@@ -67,22 +60,19 @@ impl NfaState<'_> {
         return (p, state);
     }
 
-    fn evaluate_p(&self, i: usize, p: f32) -> (f32, f32) {
-        if let Some((dist, _, n)) = self.state_params.get(&i) {
-            return match dist {
-                Dist::Constant(c) => (p * c, p * c),
-                Dist::ExactlyTimes(match_n) => {
-                    if n == match_n {
-                        (0.0, p)
-                    } else if n < match_n {
-                        (p, 0.0)
-                    } else {
-                        (0.0, 0.0)
-                    }
-                }
-            };
+    fn get_params(&mut self, i: usize) -> &mut StateParams {
+        let state = &self.nfa[i];
+        match state.kind {
+            Kind::ExactQuantifier(n) => {
+                self.state_params
+                    .entry(i)
+                    .or_insert((Dist::ExactlyTimes(n), 0.0, 0))
+            }
+            _ => self
+                .state_params
+                .entry(i)
+                .or_insert((Dist::Constant(1.0), 0.0, 0)),
         }
-        (p, p)
     }
 
     pub fn add_state(&mut self, idx: Option<usize>, force: bool, p: f32) -> f32 {
@@ -103,7 +93,8 @@ impl NfaState<'_> {
                     return p;
                 }
                 Kind::Quantifier(_) | Kind::Start | Kind::Split | Kind::ExactQuantifier(_) => {
-                    let (p0, p1) = self.evaluate_p(i, p);
+                    let params = self.get_params(i);
+                    let (p0, p1) = evaluate(p, Some(params));
                     return f32::max(
                         self.add_state(state.outs.0, force, p0),
                         self.add_state(state.outs.1, force, p1),
@@ -170,30 +161,22 @@ impl NfaState<'_> {
 
     fn update_state(&mut self, i: usize, p: f32, count: bool) {
         let state = &self.nfa[i];
-        debug!("    update {} p={} {}", state.kind, p, count);
+        debug!("      update {} p={} {}", state.kind, p, count);
 
         match state.kind {
             Kind::ExactQuantifier(n) => {
-                let entry = self
-                    .state_params
-                    .entry(i)
-                    .or_insert((Dist::ExactlyTimes(n), 0.0, 0));
-                entry.1 = f32::max(entry.1, p);
+                let mut params = self.get_params(i);
+                params.1 = f32::max(params.1, p);
                 if count {
-                    entry.2 += 1;
+                    params.2 += 1;
                 }
             }
             _ => {
                 self.current_states.insert(i);
-                let entry = self
-                    .state_params
-                    .entry(i)
-                    .or_insert((Dist::Constant(1.0), 0.0, 0));
-                // let (prob, p, count) = entry;
-                // *entry = (*prob, *p, *count + 1);
-                entry.1 = f32::max(entry.1, p);
+                let mut params = self.get_params(i);
+                params.1 = f32::max(params.1, p);
                 if count {
-                    entry.2 += 1;
+                    params.2 += 1;
                 }
             }
         }

@@ -16,6 +16,7 @@ use log::Level;
 
 mod ast;
 mod config;
+mod distribution;
 mod nfa;
 mod parser;
 mod runner;
