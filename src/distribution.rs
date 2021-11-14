@@ -29,3 +29,60 @@ pub fn evaluate(p: f32, params: Option<&StateParams>) -> (f32, f32) {
     }
     (p, p)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_distribution_constant() {
+        assert_eq!(
+            evaluate(1.0, Some(&(Dist::Constant(1.0), 0.0, 1))),
+            (1.0, 1.0)
+        );
+        assert_eq!(
+            evaluate(0.5, Some(&(Dist::Constant(1.0), 0.0, 1))),
+            (0.5, 0.5)
+        );
+        assert_eq!(
+            evaluate(1.0, Some(&(Dist::Constant(0.5), 0.0, 1))),
+            (0.5, 0.5)
+        );
+    }
+
+    #[test]
+    fn test_distribution_exactly_times() {
+        assert_eq!(
+            evaluate(1.0, Some(&(Dist::ExactlyTimes(2), 0.0, 0))),
+            (1.0, 0.0)
+        );
+        assert_eq!(
+            evaluate(1.0, Some(&(Dist::ExactlyTimes(2), 0.0, 1))),
+            (1.0, 0.0)
+        );
+        assert_eq!(
+            evaluate(1.0, Some(&(Dist::ExactlyTimes(2), 0.0, 2))),
+            (0.0, 1.0)
+        );
+        assert_eq!(
+            evaluate(1.0, Some(&(Dist::ExactlyTimes(2), 0.0, 3))),
+            (0.0, 0.0)
+        );
+
+        assert_eq!(
+            evaluate(0.5, Some(&(Dist::ExactlyTimes(2), 0.0, 0))),
+            (0.5, 0.0)
+        );
+        assert_eq!(
+            evaluate(0.5, Some(&(Dist::ExactlyTimes(2), 0.0, 1))),
+            (0.5, 0.0)
+        );
+        assert_eq!(
+            evaluate(0.5, Some(&(Dist::ExactlyTimes(2), 0.0, 2))),
+            (0.0, 0.5)
+        );
+        assert_eq!(
+            evaluate(0.5, Some(&(Dist::ExactlyTimes(2), 0.0, 3))),
+            (0.0, 0.0)
+        );
+    }
+}
