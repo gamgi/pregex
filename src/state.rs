@@ -36,14 +36,19 @@ impl NfaState<'_> {
         };
     }
 
-    pub fn update_states_counts(&mut self, idxs: &Vec<usize>) {
-        for idx in idxs.iter() {
-            self.update_state(*idx, 0.0, true);
-        }
+    pub fn update_states_counts(&mut self, states: &HashMap<usize, f32>) {
+        // TODO how is count dependent on p?
+        states
+            .into_iter()
+            .for_each(|(i, p)| self.update_state(*i, 0.0, true));
     }
 
-    pub fn add_states(&mut self, idxs: Vec<Option<usize>>, force: bool, p: f32) -> f32 {
-        find_max(idxs.into_iter().map(|idx| self.add_state(idx, force, p)))
+    pub fn add_states(&mut self, states: &HashMap<usize, f32>, force: bool) -> f32 {
+        find_max(
+            states
+                .into_iter()
+                .map(|(i, p)| self.add_state(Some(*i), force, *p)),
+        )
     }
 
     fn get_count(&self, idx: usize) -> u32 {
@@ -53,17 +58,19 @@ impl NfaState<'_> {
         0
     }
 
-    fn get_p(&self, idx: usize) -> f32 {
-        if let Some(params) = self.state_params.get(&idx) {
-            return params.1;
-        }
-        0.0
+    fn get_state(&self, i: usize) -> (f32, &State) {
+        let p = match self.state_params.get(&i) {
+            Some(params) => params.1,
+            None => 0.0,
+        };
+        let state = &self.nfa[i];
+        return (p, state);
     }
 
-    fn evaluate_state(&mut self, i: usize, p: f32) -> (f32, f32) {
+    fn evaluate_p(&self, i: usize, p: f32) -> (f32, f32) {
         if let Some((dist, _, n)) = self.state_params.get(&i) {
             return match dist {
-                Dist::Constant(p0) => (p * p0, p * p0),
+                Dist::Constant(c) => (p * c, p * c),
                 Dist::ExactlyTimes(match_n) => {
                     if n == match_n {
                         (0.0, p)
@@ -75,51 +82,34 @@ impl NfaState<'_> {
                 }
             };
         }
-        (0.0, 0.0) // TODO
+        (p, p)
     }
 
     pub fn add_state(&mut self, idx: Option<usize>, force: bool, p: f32) -> f32 {
-        // TODO return p instead of bool
         let i = if let Some(i) = idx { i } else { return 0.0 };
 
         if let Some(state) = self.nfa.get(i) {
-            println!("  add? {} p={}", state.kind, p);
             let is_previously_visited = !self.visited.insert(i);
             if is_previously_visited && !force {
                 // TODO still update p
-                println!("  skip {}", self.nfa[i].kind.to_string());
-                debug!("    skip {}", self.nfa[i].kind.to_string());
+                debug!("    skip {}", state.kind);
                 return 0.0;
             }
+            debug!("    add {} p={}", state.kind, p);
 
             match state.kind {
                 Kind::Terminal => {
                     self.update_state(i, p, false);
                     return p;
                 }
-                Kind::Quantifier(_) | Kind::Start | Kind::Split => {
-                    // follow outs of quantifier
+                Kind::Quantifier(_) | Kind::Start | Kind::Split | Kind::ExactQuantifier(_) => {
+                    let (p0, p1) = self.evaluate_p(i, p);
                     return f32::max(
-                        self.add_state(state.outs.0, force, p),
-                        self.add_state(state.outs.1, force, p),
-                    );
-                }
-                Kind::ExactQuantifier(match_n) => {
-                    let n = self.get_count(i);
-                    let (p0, p1) = self.evaluate_state(i, p);
-                    // TODO use same for all kinds
-                    println!(
-                        "    exq {} of {} {} p={} p12=({} {})",
-                        n, match_n, state.kind, p, p0, p1
-                    );
-
-                    return f32::max(
-                        self.add_state(state.outs.1, true, p1),
-                        self.add_state(state.outs.0, true, p0),
+                        self.add_state(state.outs.0, force, p0),
+                        self.add_state(state.outs.1, force, p1),
                     );
                 }
                 _ => {
-                    // add state
                     self.update_state(i, p, false);
                 }
             }
@@ -133,29 +123,30 @@ impl NfaState<'_> {
     }
 
     pub fn step(&mut self, token: char) -> f32 {
-        println!("step {}", token);
         debug!("step {}", token);
         let mut new_states: HashMap<usize, f32> = HashMap::new();
         let mut result = 0.0;
 
+        let mut add_new_state = |idx, p| match idx {
+            Some(i) => {
+                let e = new_states.entry(i).or_insert(0.0);
+                *e = f32::max(*e, p);
+            }
+            None => {}
+        };
+
         for i in self.current_states.iter() {
-            let state = &self.nfa[*i];
-            let p = self.get_p(*i);
+            let (p, state) = self.get_state(*i);
             match state.kind {
                 Kind::Terminal => {
+                    debug!("  terminal");
                     result = f32::max(p, result);
                 }
                 Kind::Literal(match_token) => {
                     if match_token == token {
-                        println!("  match {}", token);
-                        if let Some(o0) = state.outs.0 {
-                            let e = new_states.entry(o0).or_insert(0.0);
-                            *e = f32::max(*e, p);
-                        }
-                        if let Some(o1) = state.outs.1 {
-                            let e = new_states.entry(o1).or_insert(0.0);
-                            *e = f32::max(*e, p);
-                        }
+                        debug!("  match {}", token);
+                        add_new_state(state.outs.0, p);
+                        add_new_state(state.outs.1, p);
                     }
                 }
                 _ => {}
@@ -163,27 +154,25 @@ impl NfaState<'_> {
         }
 
         self.current_states.drain();
-        self.update_states_counts(&new_states.keys().copied().collect::<Vec<usize>>());
-        println!("  flush {:?}", self.state_params);
-        debug!("  flush");
-        result = f32::max(
-            result,
-            find_max(
-                new_states
-                    .iter()
-                    .map(|(i, p)| self.add_state(Some(*i), false, *p)),
-            ),
+        self.update_states_counts(&new_states);
+        debug!(
+            "  flush {}",
+            self.state_params
+                .iter()
+                .map(|(k, v)| format!("p({})={}", k, v.1))
+                .join(" ")
         );
+        result = f32::max(result, self.add_states(&new_states, false));
         self.visited.drain();
-        println!("  {}", result);
+        debug!("  p terminal={}", result);
         return result;
     }
 
     fn update_state(&mut self, i: usize, p: f32, count: bool) {
-        debug!("  update {} {} {}", i, p, count);
-        println!("  update {} {} {}", i, p, count);
+        let state = &self.nfa[i];
+        debug!("    update {} p={} {}", state.kind, p, count);
 
-        match self.nfa[i].kind {
+        match state.kind {
             Kind::ExactQuantifier(n) => {
                 let entry = self
                     .state_params

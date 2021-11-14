@@ -40,7 +40,7 @@ fn main() -> Result<(), String> {
     let asts = parser::parse(&config.pattern).unwrap_or_else(|error| {
         panic!("{}", error);
     });
-    // println!("{:?}", asts[0].to_string());
+
     let nfa = nfa::asts_to_nfa(asts);
     match runner::matches(&nfa, &config.string) {
         true => println!("{}", config.string),
