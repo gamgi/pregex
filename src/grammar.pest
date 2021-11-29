@@ -12,7 +12,14 @@ Token           = _{ Literal }
 Quantified      =  { ( Token | Group ) ~ Quantifier }
 Literal         =  { ASCII_ALPHANUMERIC | " " }
 
-Quantifier      = _{ ShortQuantifier | ExactQuantifier }
+Quantifier      = _{ ShortQuantifier | LongQuantifier }
 ShortQuantifier =  { "+" | "?" | "*" }
-ExactQuantifier =  { "{" ~ QuantifierParam ~ "}" }
+LongQuantifier  = _{ "{" ~ ExactQuantifier ~ QuantifierDist? ~ "}" }
+ExactQuantifier =  { QuantifierParam }
+
 QuantifierParam =  { ASCII_DIGIT* }
+QuantifierDist  =  { "~" ~ DistName ~ "(" ~ DistParam ~ ")" }
+DistName        =  { ^"Geo" }
+DistParam       =  { ASCII_FLOAT }
+
+ASCII_FLOAT     = _{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
