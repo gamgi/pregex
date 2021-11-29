@@ -5,12 +5,23 @@ use itertools::Itertools;
 use statrs::distribution::{Discrete, Geometric};
 use statrs::statistics::Distribution;
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Dist {
     Constant(f64),
     ExactlyTimes(u64),
     PGeometric(f64),
+}
+
+impl fmt::Display for Dist {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Dist::Constant(_) => write!(f, ""),
+            Dist::ExactlyTimes(n) => write!(f, "{{{}}}", n),
+            Dist::PGeometric(p) => write!(f, "{{~G({}))}}", p),
+        }
+    }
 }
 
 pub type StateParams = (Dist, f64, u64); // (c, p, visits)

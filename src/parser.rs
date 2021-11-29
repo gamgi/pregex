@@ -90,6 +90,7 @@ mod test {
                         length: 1,
                         kind: Kind::Literal('a'),
                     }),
+                    None,
                 ),
             },
             AstNode {
@@ -118,6 +119,7 @@ mod test {
                                 length: 1,
                                 kind: Kind::Literal('a'),
                             }),
+                            None,
                         ),
                     }),
                     Box::new(AstNode {
@@ -149,6 +151,7 @@ mod test {
                         length: 1,
                         kind: Kind::Literal('a'),
                     }),
+                    None,
                 ),
             },
             AstNode {

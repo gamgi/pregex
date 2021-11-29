@@ -99,7 +99,7 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs) -> Frag {
             start: index,
             outs: outs,
         },
-        Kind::Quantified(quantifier, quantified) => {
+        Kind::Quantified(quantifier, quantified, _) => {
             quantifier_to_frag(*quantifier, *quantified, index, outs)
         }
         Kind::Quantifier(_) | Kind::ExactQuantifier(_) => Frag {
@@ -303,6 +303,7 @@ mod test {
                                 length: 1,
                                 kind: Kind::Literal('a'),
                             }),
+                            None,
                         ),
                     }),
                     Box::new(AstNode {
@@ -361,6 +362,7 @@ mod test {
                                 length: 1,
                                 kind: Kind::Literal('b'),
                             }),
+                            None,
                         ),
                     }),
                 ),
@@ -415,6 +417,7 @@ mod test {
                                 length: 1,
                                 kind: Kind::Literal('b'),
                             }),
+                            None,
                         ),
                     }),
                 ),
@@ -469,6 +472,7 @@ mod test {
                                 length: 1,
                                 kind: Kind::Literal('b'),
                             }),
+                            None,
                         ),
                     }),
                 ),
@@ -524,6 +528,7 @@ mod test {
                                 length: 1,
                                 kind: Kind::Literal('b'),
                             }),
+                            None,
                         ),
                     }),
                 ),
@@ -600,6 +605,7 @@ mod test {
                             length: 1,
                             kind: Kind::Literal('b'),
                         }),
+                        None,
                     ),
                 }),
             ),
