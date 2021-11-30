@@ -51,35 +51,35 @@ impl NfaState<'_> {
         0
     }
 
-    fn get_state(&self, i: usize) -> (f64, &State) {
-        let p = match self.state_params.get(&i) {
+    fn get_state(&self, idx: usize) -> (f64, &State) {
+        let p = match self.state_params.get(&idx) {
             Some(params) => params.1,
             None => 0.0,
         };
-        let state = &self.nfa[i];
+        let state = &self.nfa[idx];
         return (p, state);
     }
 
-    fn get_params(&mut self, i: usize) -> &mut StateParams {
-        let state = &self.nfa[i];
+    fn get_params(&mut self, idx: usize) -> &mut StateParams {
+        let state = &self.nfa[idx];
         match state.kind {
             Kind::ExactQuantifier(n) => {
                 self.state_params
-                    .entry(i)
+                    .entry(idx)
                     .or_insert((Dist::ExactlyTimes(n), 0.0, 0))
             }
             _ => self
                 .state_params
-                .entry(i)
+                .entry(idx)
                 .or_insert((Dist::Constant(1.0), 0.0, 0)),
         }
     }
 
     pub fn add_state(&mut self, idx: Option<usize>, force: bool, p: f64) -> f64 {
-        let i = if let Some(i) = idx { i } else { return 0.0 };
+        let idx = if let Some(idx) = idx { idx } else { return 0.0 };
 
-        if let Some(state) = self.nfa.get(i) {
-            let is_previously_visited = !self.visited.insert(i);
+        if let Some(state) = self.nfa.get(idx) {
+            let is_previously_visited = !self.visited.insert(idx);
             if is_previously_visited && !force {
                 // TODO still update p
                 debug!("    skip {}", state.kind);
@@ -89,11 +89,11 @@ impl NfaState<'_> {
 
             match state.kind {
                 Kind::Terminal => {
-                    self.update_state(i, p, false);
+                    self.update_state(idx, p, false);
                     return p;
                 }
                 Kind::Quantifier(_) | Kind::Start | Kind::Split | Kind::ExactQuantifier(_) => {
-                    let params = self.get_params(i);
+                    let params = self.get_params(idx);
                     let (p0, p1) = evaluate(p, Some(params));
                     return f64::max(
                         self.add_state(state.outs.0, force, p0),
@@ -101,7 +101,7 @@ impl NfaState<'_> {
                     );
                 }
                 _ => {
-                    self.update_state(i, p, false);
+                    self.update_state(idx, p, false);
                 }
             }
         }

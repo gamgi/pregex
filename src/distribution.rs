@@ -24,7 +24,7 @@ impl fmt::Display for Dist {
     }
 }
 
-pub type StateParams = (Dist, f64, u64); // (c, p, visits)
+pub type StateParams = (Dist, f64, u64); // (distribution, p, visits)
 
 pub fn evaluate(p0: f64, params: Option<&StateParams>) -> (f64, f64) {
     if let Some((dist, _, n)) = params {
