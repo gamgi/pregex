@@ -11,4 +11,8 @@ Factor          = _{ Quantified | Group | Token }
 Token           = _{ Literal }
 Quantified      =  { ( Token | Group ) ~ Quantifier }
 Literal         =  { ASCII_ALPHANUMERIC | " " }
-Quantifier      =  { "+" | "?" | "*" }
+
+Quantifier      = _{ ShortQuantifier | ExactQuantifier }
+ShortQuantifier =  { "+" | "?" | "*" }
+ExactQuantifier =  { "{" ~ QuantifierParam ~ "}" }
+QuantifierParam =  { ASCII_DIGIT* }

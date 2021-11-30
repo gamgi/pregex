@@ -135,6 +135,31 @@ mod test {
     }
 
     #[test]
+    fn test_parser_exact_quantifier_ast() {
+        let result = parse("a{2}").unwrap_or(vec![]);
+        let expected = vec![
+            AstNode {
+                length: 2,
+                kind: Kind::Quantified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::ExactQuantifier(2),
+                    }),
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Literal('a'),
+                    }),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
     fn test_parser_concat_length() {
         let result = parse("ab").unwrap_or(vec![]).first().unwrap().to_owned();
         assert_eq!(result.length, 2);
@@ -181,5 +206,11 @@ mod test {
         assert_eq!(ast_as_str(parse("(a(bc))d").unwrap()), "abc..d.$");
         assert_eq!(ast_as_str(parse("(a|b)").unwrap()), "a|b$");
         assert_eq!(ast_as_str(parse("(a|b)c").unwrap()), "a|bc.$"); // TODO not a great representation
+    }
+
+    #[test]
+    fn test_parser_exact_quantifier() {
+        assert_eq!(ast_as_str(parse("a{2}").unwrap()), "a{2}$");
+        assert_eq!(ast_as_str(parse("a{20}").unwrap()), "a{20}$");
     }
 }

@@ -1,95 +1,23 @@
 #![allow(dead_code, unused_imports, unused_mut, unused_variables)]
 use crate::ast::{AstNode, Kind};
 use crate::nfa::State;
+use crate::state::NfaState;
 use log::Level;
 use std::collections::HashSet;
-
-fn add_state(
-    add_idx: Option<usize>,
-    nfa: &Vec<State>,
-    visited: &mut HashSet<usize>,
-    current_states: &mut Vec<State>,
-) {
-    if let Some(i) = add_idx {
-        if !visited.insert(i) {
-            debug!("    skip {}", nfa[i].node.to_string());
-            return;
-        }
-        let state = &nfa[i];
-        if let Kind::Quantifier(c) = state.node.kind {
-            // follow outs of quantifier
-            debug!("  split {:?} and {:?}", state.outs.0, state.outs.1);
-            add_state(state.outs.0, nfa, visited, current_states);
-            add_state(state.outs.1, nfa, visited, current_states);
-            return;
-        } else if let Kind::Start = state.node.kind {
-            // follow out of start
-            debug!("  start at {:?}", state.outs.0);
-            add_state(state.outs.0, nfa, visited, current_states);
-            return;
-        } else {
-            // add state
-            debug!("    add  {}", state.node.to_string());
-            current_states.push(state.clone());
-        }
-    }
-}
-
-fn step(
-    c: char,
-    nfa: &Vec<State>,
-    visited: &mut HashSet<usize>,
-    current_states: Vec<State>,
-) -> Vec<State> {
-    let mut new_states = Vec::new();
-    if log_enabled!(Level::Debug) {
-        debug!("step {}", c);
-        debug!(
-            "  current_states {:?}",
-            current_states
-                .iter()
-                .map(|s| s.node.to_string())
-                .collect::<Vec<String>>()
-        );
-    }
-
-    for state in current_states.iter() {
-        if let Kind::Terminal = state.node.kind {
-            // end
-            debug!("  match terminal");
-            add_state(state.outs.0, nfa, visited, &mut new_states);
-        } else if let Kind::Split = state.node.kind {
-            // split
-            debug!("  match split");
-            add_state(state.outs.0, nfa, visited, &mut new_states);
-            add_state(state.outs.1, nfa, visited, &mut new_states);
-            new_states = step(c, nfa, visited, new_states);
-        } else if state.node.to_string() == c.to_string() {
-            // match
-            debug!("  match {} add {:?}", c, state.outs.0);
-            add_state(state.outs.0, nfa, visited, &mut new_states);
-        } else {
-            debug!("  {} != {}", state.node.to_string(), c.to_string());
-        }
-    }
-    new_states
-}
 
 pub fn matches(nfa: &Vec<State>, string: &str) -> bool {
     if nfa.len() == 0 {
         return true;
     }
-    let end = nfa.len() - 1;
-    let mut visited: HashSet<usize> = HashSet::new();
-    let mut current_states = Vec::new();
-    add_state(Some(0), nfa, &mut visited, &mut current_states);
-    visited.drain(); // ignore start state visists
+    let mut state = NfaState::new(nfa);
+    state.init_state(Some(0), true);
+
+    // step through string
     for c in string.chars() {
-        current_states = step(c, nfa, &mut visited, current_states);
-        if visited.contains(&end) {
+        if state.step(c) == 1.0 {
+            debug!("match");
             return true;
         }
-        visited.drain();
     }
     false
 }
@@ -132,23 +60,30 @@ mod test {
             State::from(
                 AstNode {
                     length: 1,
+                    kind: Kind::Start,
+                },
+                (Some(1), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
                     kind: Kind::Split,
                 },
-                (Some(1), Some(2)),
+                (Some(2), Some(3)),
             ),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('a'),
                 },
-                (Some(3), None),
+                (Some(4), None),
             ),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('b'),
                 },
-                (Some(3), None),
+                (Some(4), None),
             ),
             State::new(AstNode {
                 length: 1,
@@ -212,30 +147,37 @@ mod test {
             State::from(
                 AstNode {
                     length: 1,
-                    kind: Kind::Literal('a'),
+                    kind: Kind::Start,
                 },
-                (Some(2), None),
+                (Some(1), None),
             ),
             State::from(
                 AstNode {
                     length: 1,
-                    kind: Kind::Literal('b'),
+                    kind: Kind::Literal('a'),
                 },
                 (Some(3), None),
             ),
             State::from(
                 AstNode {
                     length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(4), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
                     kind: Kind::Quantifier('?'),
                 },
-                (Some(1), Some(3)),
+                (Some(2), Some(4)),
             ),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('c'),
                 },
-                (Some(4), None),
+                (Some(5), None),
             ),
             State::new(AstNode {
                 length: 1,
@@ -339,5 +281,49 @@ mod test {
         assert_eq!(matches(&nfa, "abc"), true);
         assert_eq!(matches(&nfa, "abcx"), true);
         assert_eq!(matches(&nfa, "xabc"), false);
+    }
+
+    #[test]
+    fn test_matches_exact_quantifier() {
+        let nfa = vec![
+            State {
+                kind: Kind::Start,
+                outs: (Some(1), None),
+            },
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::ExactQuantifier(2),
+                },
+                (Some(1), Some(3)),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(4), None),
+            ),
+            State::new(AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            }),
+        ];
+        assert_eq!(matches(&nfa, "a"), false);
+        assert_eq!(matches(&nfa, "aa"), false);
+        assert_eq!(matches(&nfa, "ab"), false);
+        assert_eq!(matches(&nfa, "aba"), false);
+        assert_eq!(matches(&nfa, "aab"), true);
+        assert_eq!(matches(&nfa, "abb"), false);
+        assert_eq!(matches(&nfa, "aaab"), false);
+        assert_eq!(matches(&nfa, "xaab"), false);
+        assert_eq!(matches(&nfa, "aabx"), true);
     }
 }
