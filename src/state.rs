@@ -9,7 +9,7 @@ pub struct NfaState<'a> {
     nfa: &'a Vec<State>,
     visited: HashSet<usize>,
     pub current_states: HashSet<usize>,
-    state_params: HashMap<usize, StateParams>,
+    current_states_params: HashMap<usize, StateParams>,
 }
 
 fn find_max<'a, I>(vals: I) -> f64
@@ -24,8 +24,8 @@ impl NfaState<'_> {
         return NfaState {
             nfa: nfa,
             current_states: HashSet::new(),
+            current_states_params: HashMap::new(),
             visited: HashSet::new(),
-            state_params: HashMap::new(),
         };
     }
 
@@ -45,14 +45,14 @@ impl NfaState<'_> {
     }
 
     fn get_count(&self, idx: usize) -> u64 {
-        if let Some(params) = self.state_params.get(&idx) {
+        if let Some(params) = self.current_states_params.get(&idx) {
             return params.2;
         }
         0
     }
 
     fn get_state(&self, idx: usize) -> (f64, &State) {
-        let p = match self.state_params.get(&idx) {
+        let p = match self.current_states_params.get(&idx) {
             Some(params) => params.1,
             None => 0.0,
         };
@@ -148,7 +148,7 @@ impl NfaState<'_> {
         self.update_states_counts(&new_states);
         debug!(
             "  flush {}",
-            self.state_params
+            self.current_states_params
                 .iter()
                 .map(|(k, v)| format!("p({})={}", k, v.1))
                 .join(" ")
@@ -211,7 +211,7 @@ mod test {
         state.init_state(Some(0), true);
         assert_eq!(state.current_states.len(), 1);
         assert_eq!(
-            *state.state_params.get(&1).unwrap(),
+            *state.current_states_params.get(&1).unwrap(),
             (Dist::Constant(1.0), 1.0, 0)
         );
         assert_eq!(state.visited.len(), 0);
@@ -389,19 +389,19 @@ mod test {
         state.init_state(Some(0), true);
         assert_eq!(state.step('a'), 0.0);
         let probs = state
-            .state_params
+            .current_states_params
             .keys()
             .sorted()
-            .map(|k| state.state_params[k].1)
+            .map(|k| state.current_states_params[k].1)
             .collect::<Vec<f64>>();
         assert_eq!(probs, vec![1.0, 0.0, 0.0]);
 
         assert_eq!(state.step('a'), 1.0);
         let probs = state
-            .state_params
+            .current_states_params
             .keys()
             .sorted()
-            .map(|k| state.state_params[k].1)
+            .map(|k| state.current_states_params[k].1)
             .collect::<Vec<f64>>();
         assert_eq!(probs, vec![0.0, 0.0, 1.0]);
     }
