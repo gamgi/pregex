@@ -1,4 +1,5 @@
 use crate::ast::{AstNode, Kind};
+use crate::distribution::Dist;
 use crate::parser::parse;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -508,7 +509,6 @@ mod test {
 
     #[test]
     fn test_compile_exact_quantifier() {
-        // TODO
         let result = ast_to_nfa(
             AstNode {
                 length: 3,
@@ -528,7 +528,62 @@ mod test {
                                 length: 1,
                                 kind: Kind::Literal('b'),
                             }),
-                            None,
+                            Some(Dist::ExactlyTimes(2)),
+                        ),
+                    }),
+                ),
+            },
+            0,
+            3,
+        );
+        let expected = vec![
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(1), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::ExactQuantifier(2),
+                },
+                (Some(1), Some(3)),
+            ),
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_compile_exact_quantifier_dist() {
+        let result = ast_to_nfa(
+            AstNode {
+                length: 3,
+                kind: Kind::Concatenation(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Literal('a'),
+                    }),
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Quantified(
+                            Box::new(AstNode {
+                                length: 1,
+                                kind: Kind::ExactQuantifier(2),
+                            }),
+                            Box::new(AstNode {
+                                length: 1,
+                                kind: Kind::Literal('b'),
+                            }),
+                            Some(Dist::PGeometric(0.5)),
                         ),
                     }),
                 ),

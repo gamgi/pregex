@@ -152,7 +152,33 @@ mod test {
                         length: 1,
                         kind: Kind::Literal('a'),
                     }),
-                    None,
+                    Some(Dist::ExactlyTimes(2)),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_exact_quantifier_dist_ast() {
+        let result = parse("a{2~Geo(0.5)}").unwrap_or(vec![]);
+        let expected = vec![
+            AstNode {
+                length: 2,
+                kind: Kind::Quantified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::ExactQuantifier(2),
+                    }),
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Literal('a'),
+                    }),
+                    Some(Dist::PGeometric(0.5)),
                 ),
             },
             AstNode {
@@ -216,5 +242,10 @@ mod test {
     fn test_parser_exact_quantifier() {
         assert_eq!(ast_as_str(parse("a{2}").unwrap()), "a{2}$");
         assert_eq!(ast_as_str(parse("a{20}").unwrap()), "a{20}$");
+    }
+
+    #[test]
+    fn test_parser_exact_quantifier_dist() {
+        assert_eq!(ast_as_str(parse("a{2~Geo(1.0)}").unwrap()), "a{2~Geo(1)}$");
     }
 }

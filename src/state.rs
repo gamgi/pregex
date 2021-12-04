@@ -361,7 +361,7 @@ mod test {
     }
 
     #[test]
-    fn test_state_probs() {
+    fn test_state_p_exact_quantifier() {
         let nfa = vec![
             State::from(
                 AstNode {
