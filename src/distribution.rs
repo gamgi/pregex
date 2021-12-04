@@ -18,8 +18,8 @@ impl fmt::Display for Dist {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Dist::Constant(_) => write!(f, ""),
-            Dist::ExactlyTimes(n) => write!(f, "{{{}}}", n),
-            Dist::PGeometric(p) => write!(f, "{{~G({}))}}", p),
+            Dist::ExactlyTimes(n) => write!(f, ""),
+            Dist::PGeometric(p) => write!(f, "~Geo({})", p),
         }
     }
 }

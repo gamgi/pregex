@@ -28,14 +28,15 @@ impl fmt::Display for Kind {
         match &self {
             Kind::Literal(c) => write!(f, "{}", c),
             Kind::Concatenation(l, r) => write!(f, "{}{}.", l, r),
-            Kind::Quantified(r, l, Some(q)) => write!(f, "{}{}{}", l, r, q),
-            Kind::Quantified(r, l, None) => write!(f, "{}{}", l, r),
+            Kind::Quantified(r, l, Some(q)) => write!(f, "{}{{{}{}}}", l, r, q),
+            Kind::Quantified(r, l, None) => write!(f, "{}{{{}}}", l, r),
             Kind::Quantifier(c) => write!(f, "{}", c),
-            Kind::ExactQuantifier(n) => write!(f, "{{{}}}", n),
+            Kind::ExactQuantifier(n) => write!(f, "{}", n),
             Kind::Alternation(l, r) => write!(f, "{}|{}", l, r),
             Kind::Split => write!(f, "|"),
             Kind::Terminal => write!(f, "$"),
             Kind::Start => write!(f, "^"),
+            // See also fmt::Display for Dist
         }
     }
 }
@@ -75,17 +76,18 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
         Rule::Quantified => {
             let mut pair = pair.into_inner();
             let left_ast = build_ast_from_expr(pair.next().unwrap());
+            // pair.next is ShortQuantifier or LongQuantifier
             let quantifier_ast = build_ast_from_expr(pair.next().unwrap());
-            if let Some(dist) = pair.next() {
-                let (name, param) = dist.into_inner().collect_tuple().unwrap();
-                let name = name.as_str().to_lowercase();
-                let p: f64 = param.as_str().parse().unwrap();
-
-                println!("dist {} {}", name, p);
-            }
+            // pair.next is Option<QuantifierDist>
+            let quantifier_dist = match pair.next() {
+            };
             AstNode {
                 length: left_ast.length + quantifier_ast.length,
-                kind: Kind::Quantified(Box::new(quantifier_ast), Box::new(left_ast), None),
+                kind: Kind::Quantified(
+                    Box::new(quantifier_ast),
+                    Box::new(left_ast),
+                    quantifier_dist,
+                ),
             }
         }
         Rule::Literal => {
