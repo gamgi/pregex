@@ -2,6 +2,7 @@
 use crate::ast::{AstNode, Kind};
 use crate::nfa::State;
 use itertools::Itertools;
+use pest;
 use statrs::distribution::{Discrete, Geometric};
 use statrs::statistics::Distribution;
 use std::collections::{HashMap, HashSet};
@@ -20,6 +21,31 @@ impl fmt::Display for Dist {
             Dist::Constant(_) => write!(f, ""),
             Dist::ExactlyTimes(n) => write!(f, ""),
             Dist::PGeometric(p) => write!(f, "~Geo({})", p),
+        }
+    }
+}
+
+impl From<pest::iterators::Pair<'_, crate::parser::Rule>> for Dist {
+    fn from(quantifier_dist_pair: pest::iterators::Pair<'_, crate::parser::Rule>) -> Self {
+        let (name, param) = quantifier_dist_pair.into_inner().collect_tuple().unwrap();
+        let name = name.to_string().to_lowercase();
+        match name.as_str() {
+            "geo" => {
+                let p: f64 = param.as_str().parse().unwrap();
+                Dist::PGeometric(p)
+            }
+            _ => {
+                panic!("Unknown distribution {}", name)
+            }
+        }
+    }
+}
+
+impl Dist {
+    pub fn default_from(quantifier_kind: &Kind) -> Dist {
+        match quantifier_kind {
+            Kind::ExactQuantifier(n) => Dist::ExactlyTimes(*n),
+            _ => Dist::Constant(1.0),
         }
     }
 }

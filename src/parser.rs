@@ -26,6 +26,7 @@ pub fn parse(source: &str) -> std::result::Result<Vec<AstNode>, pest::error::Err
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::distribution::Dist;
 
     fn ast_as_str(asts: Vec<AstNode>) -> String {
         asts.into_iter()
