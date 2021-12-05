@@ -286,10 +286,7 @@ mod test {
     #[test]
     fn test_matches_exact_quantifier() {
         let nfa = vec![
-            State {
-                kind: Kind::Start,
-                outs: (Some(1), None),
-            },
+            State::start(1),
             State::from(
                 AstNode {
                     length: 1,

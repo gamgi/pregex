@@ -1,11 +1,12 @@
 use crate::ast::{AstNode, Kind};
-use crate::distribution::Dist;
+use crate::distribution::{Dist, StateParams};
 use crate::parser::parse;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct State {
     pub kind: Kind,
     pub outs: Outs,
+    pub params: Option<StateParams>,
 }
 
 impl State {
@@ -13,12 +14,21 @@ impl State {
         State {
             kind: node.kind,
             outs: (None, None),
+            params: None,
         }
     }
     pub fn from(node: AstNode, outs: Outs) -> State {
         State {
             kind: node.kind,
             outs: outs,
+            params: None,
+        }
+    }
+    pub fn start(idx: usize) -> State {
+        State {
+            kind: Kind::Start,
+            outs: (Some(idx), None),
+            params: None,
         }
     }
 }
@@ -670,10 +680,7 @@ mod test {
             kind: Kind::Terminal,
         };
         let expected = vec![
-            State {
-                kind: Kind::Start,
-                outs: (Some(1), None),
-            },
+            State::start(1),
             State::from(
                 AstNode {
                     length: 1,
@@ -710,10 +717,7 @@ mod test {
         let asts = parse("ab?c").unwrap();
         let result = asts_to_nfa(asts);
         let expected = vec![
-            State {
-                kind: Kind::Start,
-                outs: (Some(1), None),
-            },
+            State::start(1),
             State::from(
                 AstNode {
                     length: 1,
@@ -755,10 +759,7 @@ mod test {
         let asts = parse("a?b").unwrap();
         let result = asts_to_nfa(asts);
         let expected = vec![
-            State {
-                kind: Kind::Start,
-                outs: (Some(2), None),
-            },
+            State::start(2),
             State::from(
                 AstNode {
                     length: 1,
@@ -793,10 +794,7 @@ mod test {
         let asts = parse("a{2}b").unwrap();
         let result = asts_to_nfa(asts);
         let expected = vec![
-            State {
-                kind: Kind::Start,
-                outs: (Some(1), None),
-            },
+            State::start(1),
             State::from(
                 AstNode {
                     length: 1,
