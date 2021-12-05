@@ -63,17 +63,9 @@ impl NfaState<'_> {
 
     fn get_params(&mut self, idx: usize) -> &mut StateParams {
         let state = &self.nfa[idx];
-        match state.kind {
-            Kind::ExactQuantifier(n) => {
-                self.current_states_params
-                    .entry(idx)
-                    .or_insert((Dist::ExactlyTimes(n), 0.0, 0))
-            }
-            _ => self
-                .current_states_params
-                .entry(idx)
-                .or_insert((Dist::Constant(1.0), 0.0, 0)),
-        }
+        self.current_states_params
+            .entry(idx)
+            .or_insert((state.params.clone(), 0.0, 0))
     }
 
     /// Add state to set of possible states. Returns max(p(terminal)).
@@ -96,7 +88,7 @@ impl NfaState<'_> {
                 }
                 Kind::Quantifier(_) | Kind::Start | Kind::Split | Kind::ExactQuantifier(_) => {
                     let params = self.get_params(idx);
-                    let (p0, p1) = evaluate(p, Some(params));
+                    let (p0, p1) = evaluate(p, params);
                     return f64::max(
                         self.add_state(state.outs.0, force, p0),
                         self.add_state(state.outs.1, force, p1),
@@ -214,7 +206,7 @@ mod test {
         assert_eq!(state.current_states.len(), 1);
         assert_eq!(
             *state.current_states_params.get(&1).unwrap(),
-            (Dist::Constant(1.0), 1.0, 0)
+            (None, 1.0, 0)
         );
         assert_eq!(state.visited.len(), 0);
     }
@@ -372,12 +364,10 @@ mod test {
                 },
                 (Some(1), None),
             ),
-            State::from(
-                AstNode {
-                    length: 1,
-                    kind: Kind::ExactQuantifier(2),
-                },
+            State::new(
+                Kind::ExactQuantifier(2),
                 (Some(0), Some(2)),
+                Some(Dist::ExactlyTimes(2)),
             ),
             State::from(
                 AstNode {

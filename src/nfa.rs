@@ -6,16 +6,12 @@ use crate::parser::parse;
 pub struct State {
     pub kind: Kind,
     pub outs: Outs,
-    pub params: Option<StateParams>,
+    pub params: Option<Dist>,
 }
 
 impl State {
-    pub fn new(node: AstNode, params: Option<StateParams>) -> State {
-        State {
-            kind: node.kind,
-            outs: (None, None),
-            params,
-        }
+    pub fn new(kind: Kind, outs: Outs, params: Option<Dist>) -> State {
+        State { kind, outs, params }
     }
     pub fn from(node: AstNode, outs: Outs) -> State {
         State {
@@ -124,14 +120,14 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist
         Kind::Quantifier(_) | Kind::ExactQuantifier(_) => Frag {
             // quantifier points to outs
             // quantifier as start
-            states: vec![State::from(ast, outs)],
+            states: vec![State::new(ast.kind, outs, distribution)],
             start: index,
             outs: outs,
         },
         Kind::Terminal => Frag {
             // terminal points to none
             // terminal as start
-            states: vec![State::new(ast, None)],
+            states: vec![State::terminal()],
             start: index,
             outs: (None, None),
         },
@@ -587,12 +583,10 @@ mod test {
                 },
                 (Some(2), None),
             ),
-            State::from(
-                AstNode {
-                    length: 1,
-                    kind: Kind::ExactQuantifier(2),
-                },
+            State::new(
+                Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
+                Some(Dist::ExactlyTimes(2)),
             ),
         ];
         assert_eq!(result, expected);
@@ -642,12 +636,10 @@ mod test {
                 },
                 (Some(2), None),
             ),
-            State::from(
-                AstNode {
-                    length: 1,
-                    kind: Kind::ExactQuantifier(2),
-                },
+            State::new(
+                Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
+                Some(Dist::PGeometric(0.5)),
             ),
         ];
         assert_eq!(result, expected);
@@ -820,12 +812,10 @@ mod test {
                 },
                 (Some(2), None),
             ),
-            State::from(
-                AstNode {
-                    length: 1,
-                    kind: Kind::ExactQuantifier(2),
-                },
+            State::new(
+                Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
+                Some(Dist::ExactlyTimes(2)),
             ),
             State::from(
                 AstNode {

@@ -1,5 +1,6 @@
 #![allow(dead_code, unused_imports, unused_mut, unused_variables)]
 use crate::ast::{AstNode, Kind};
+use crate::distribution::Dist;
 use crate::nfa::State;
 use crate::state::NfaState;
 use log::Level;
@@ -43,13 +44,7 @@ mod test {
                 },
                 (Some(2), None),
             ),
-            State::new(
-                AstNode {
-                    length: 1,
-                    kind: Kind::Terminal,
-                },
-                None,
-            ),
+            State::terminal(),
         ];
         assert_eq!(matches(&nfa, "ab"), true);
         assert_eq!(matches(&nfa, "bb"), false);
@@ -88,13 +83,7 @@ mod test {
                 },
                 (Some(4), None),
             ),
-            State::new(
-                AstNode {
-                    length: 1,
-                    kind: Kind::Terminal,
-                },
-                None,
-            ),
+            State::terminal(),
         ];
         assert_eq!(matches(&nfa, "a"), true);
         assert_eq!(matches(&nfa, "ax"), true);
@@ -288,12 +277,10 @@ mod test {
                 },
                 (Some(2), None),
             ),
-            State::from(
-                AstNode {
-                    length: 1,
-                    kind: Kind::ExactQuantifier(2),
-                },
+            State::new(
+                Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
+                Some(Dist::ExactlyTimes(2)),
             ),
             State::from(
                 AstNode {
