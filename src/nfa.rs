@@ -10,11 +10,11 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(node: AstNode) -> State {
+    pub fn new(node: AstNode, params: Option<StateParams>) -> State {
         State {
             kind: node.kind,
             outs: (None, None),
-            params: None,
+            params,
         }
     }
     pub fn from(node: AstNode, outs: Outs) -> State {
@@ -24,10 +24,17 @@ impl State {
             params: None,
         }
     }
-    pub fn start(idx: usize) -> State {
+    pub fn start(start: Option<usize>) -> State {
         State {
             kind: Kind::Start,
-            outs: (Some(idx), None),
+            outs: (start, None),
+            params: None,
+        }
+    }
+    pub fn terminal() -> State {
+        State {
+            kind: Kind::Terminal,
+            outs: (None, None),
             params: None,
         }
     }
@@ -42,6 +49,11 @@ struct Frag {
     outs: Outs,
 }
 
+/// Compile a list of abstract syntax trees into a NFA.
+///
+/// The compilation first parses the AST(s) into fragments which
+/// represent partial NFA states following Thompson [1968].
+/// The fragments are then joined to form the final NFA.
 pub fn asts_to_nfa(asts: Vec<AstNode>) -> Vec<State> {
     // concatenate asts to single state list (HACK)
     let mut states = Vec::new();
@@ -50,41 +62,37 @@ pub fn asts_to_nfa(asts: Vec<AstNode>) -> Vec<State> {
 
     for ast in asts {
         let end = index + ast.length;
-        let nfa_frag = ast_to_frag(ast, index, (Some(end), None));
+        let nfa_frag = ast_to_frag(ast, index, (Some(end), None), None);
         index = nfa_frag.states.len();
         if let None = start {
             start = Some(nfa_frag.start);
         }
         states.extend(nfa_frag.states);
     }
-    let start_state = vec![State::from(
-        AstNode {
-            length: 1,
-            kind: Kind::Start,
-        },
-        (start, None),
-    )];
+    let start_state = vec![State::start(start)];
     [start_state, states].concat()
 }
 
 #[allow(dead_code)]
 pub fn ast_to_nfa(ast: AstNode, index: usize, out: usize) -> Vec<State> {
-    let nfa_frag = ast_to_frag(ast, index, (Some(out), None));
+    let nfa_frag = ast_to_frag(ast, index, (Some(out), None), None);
     nfa_frag.states
 }
 
-fn ast_to_frag(ast: AstNode, index: usize, outs: Outs) -> Frag {
+fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist>) -> Frag {
     match ast.kind {
         Kind::Alternation(left, right) => {
-            let right = ast_to_frag(*right, index + left.length + 1, outs);
-            let left = ast_to_frag(*left, index + 1, outs);
+            let right = ast_to_frag(*right, index + left.length + 1, outs, None);
+            let left = ast_to_frag(*left, index + 1, outs, None);
             let split = ast_to_frag(
                 AstNode {
                     length: 1,
                     kind: Kind::Split,
+                    // TODO use distribution
                 },
                 index,
                 (Some(left.start), Some(right.start)),
+                None,
             );
             Frag {
                 states: [split.states, left.states, right.states].concat(),
@@ -95,8 +103,8 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs) -> Frag {
         Kind::Concatenation(left, right) => {
             // left points to start of right and right points to outs
             // left as start
-            let right = ast_to_frag(*right, index + left.length, outs);
-            let left = ast_to_frag(*left, index, (Some(right.start), None));
+            let right = ast_to_frag(*right, index + left.length, outs, None);
+            let left = ast_to_frag(*left, index, (Some(right.start), None), None);
             Frag {
                 states: [left.states, right.states].concat(),
                 start: left.start,
@@ -110,8 +118,8 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs) -> Frag {
             start: index,
             outs: outs,
         },
-        Kind::Quantified(quantifier, quantified, _) => {
-            quantifier_to_frag(*quantifier, *quantified, index, outs)
+        Kind::Quantified(quantifier, quantified, distribution) => {
+            quantifier_to_frag(*quantifier, *quantified, index, outs, distribution)
         }
         Kind::Quantifier(_) | Kind::ExactQuantifier(_) => Frag {
             // quantifier points to outs
@@ -123,7 +131,7 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs) -> Frag {
         Kind::Terminal => Frag {
             // terminal points to none
             // terminal as start
-            states: vec![State::new(ast)],
+            states: vec![State::new(ast, None)],
             start: index,
             outs: (None, None),
         },
@@ -140,7 +148,13 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs) -> Frag {
     }
 }
 
-fn quantifier_to_frag(quantifier: AstNode, quantified: AstNode, index: usize, outs: Outs) -> Frag {
+fn quantifier_to_frag(
+    quantifier: AstNode,
+    quantified: AstNode,
+    index: usize,
+    outs: Outs,
+    distribution: Option<Dist>,
+) -> Frag {
     match quantifier.kind {
         Kind::Quantifier(c) => {
             match c {
@@ -151,10 +165,14 @@ fn quantifier_to_frag(quantifier: AstNode, quantified: AstNode, index: usize, ou
                     quantifier as start
                     */
                     let quantifier_start = index + quantified.length;
-                    let left = ast_to_frag(quantified, index, outs);
+                    let left = ast_to_frag(quantified, index, outs, None);
 
-                    let quantifier =
-                        ast_to_frag(quantifier, quantifier_start, (Some(left.start), outs.0));
+                    let quantifier = ast_to_frag(
+                        quantifier,
+                        quantifier_start,
+                        (Some(left.start), outs.0),
+                        distribution,
+                    );
 
                     return Frag {
                         states: [left.states, quantifier.states].concat(),
@@ -170,10 +188,14 @@ fn quantifier_to_frag(quantifier: AstNode, quantified: AstNode, index: usize, ou
                     quantifier as start for rest
                     */
                     let quantifier_start = index + quantified.length;
-                    let left = ast_to_frag(quantified, index, (Some(quantifier_start), None));
+                    let left = ast_to_frag(quantified, index, (Some(quantifier_start), None), None);
 
-                    let quantifier =
-                        ast_to_frag(quantifier, quantifier_start, (Some(index), outs.0));
+                    let quantifier = ast_to_frag(
+                        quantifier,
+                        quantifier_start,
+                        (Some(index), outs.0),
+                        distribution,
+                    );
                     let start = match c {
                         '+' => left.start,
                         _ => quantifier.start,
@@ -194,10 +216,14 @@ fn quantifier_to_frag(quantifier: AstNode, quantified: AstNode, index: usize, ou
             left as start
             */
             let quantifier_start = index + quantified.length;
-            let left = ast_to_frag(quantified, index, (Some(quantifier_start), None));
+            let left = ast_to_frag(quantified, index, (Some(quantifier_start), None), None);
 
-            let quantifier = ast_to_frag(quantifier, quantifier_start, (Some(index), outs.0));
-
+            let quantifier = ast_to_frag(
+                quantifier,
+                quantifier_start,
+                (Some(index), outs.0),
+                distribution,
+            );
             return Frag {
                 states: [left.states, quantifier.states].concat(),
                 start: left.start,
@@ -645,6 +671,7 @@ mod test {
             },
             0,
             (Some(2), None),
+            None,
         );
 
         assert_eq!(result.outs, (Some(2), None));
@@ -680,7 +707,7 @@ mod test {
             kind: Kind::Terminal,
         };
         let expected = vec![
-            State::start(1),
+            State::start(Some(1)),
             State::from(
                 AstNode {
                     length: 1,
@@ -702,10 +729,7 @@ mod test {
                 },
                 (Some(2), Some(4)),
             ),
-            State::new(AstNode {
-                length: 1,
-                kind: Kind::Terminal,
-            }),
+            State::terminal(),
         ];
 
         let result = asts_to_nfa(vec![first, second]);
@@ -717,7 +741,7 @@ mod test {
         let asts = parse("ab?c").unwrap();
         let result = asts_to_nfa(asts);
         let expected = vec![
-            State::start(1),
+            State::start(Some(1)),
             State::from(
                 AstNode {
                     length: 1,
@@ -746,10 +770,7 @@ mod test {
                 },
                 (Some(5), None),
             ),
-            State::new(AstNode {
-                length: 0,
-                kind: Kind::Terminal,
-            }),
+            State::terminal(),
         ];
         assert_eq!(result, expected);
     }
@@ -759,7 +780,7 @@ mod test {
         let asts = parse("a?b").unwrap();
         let result = asts_to_nfa(asts);
         let expected = vec![
-            State::start(2),
+            State::start(Some(2)),
             State::from(
                 AstNode {
                     length: 1,
@@ -781,10 +802,7 @@ mod test {
                 },
                 (Some(4), None),
             ),
-            State::new(AstNode {
-                length: 0,
-                kind: Kind::Terminal,
-            }),
+            State::terminal(),
         ];
         assert_eq!(result, expected);
     }
@@ -794,7 +812,7 @@ mod test {
         let asts = parse("a{2}b").unwrap();
         let result = asts_to_nfa(asts);
         let expected = vec![
-            State::start(1),
+            State::start(Some(1)),
             State::from(
                 AstNode {
                     length: 1,
@@ -816,10 +834,7 @@ mod test {
                 },
                 (Some(4), None),
             ),
-            State::new(AstNode {
-                length: 0,
-                kind: Kind::Terminal,
-            }),
+            State::terminal(),
         ];
         assert_eq!(result, expected);
     }

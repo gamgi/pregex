@@ -36,6 +36,7 @@ impl NfaState<'_> {
             .for_each(|(i, p)| self.update_state(*i, 0.0, true));
     }
 
+    /// Add states to set of possible states. Returns max(p(terminal)).
     pub fn add_states(&mut self, states: &HashMap<usize, f64>, force: bool) -> f64 {
         find_max(
             states
@@ -64,17 +65,18 @@ impl NfaState<'_> {
         let state = &self.nfa[idx];
         match state.kind {
             Kind::ExactQuantifier(n) => {
-                self.state_params
+                self.current_states_params
                     .entry(idx)
                     .or_insert((Dist::ExactlyTimes(n), 0.0, 0))
             }
             _ => self
-                .state_params
+                .current_states_params
                 .entry(idx)
                 .or_insert((Dist::Constant(1.0), 0.0, 0)),
         }
     }
 
+    /// Add state to set of possible states. Returns max(p(terminal)).
     pub fn add_state(&mut self, idx: Option<usize>, force: bool, p: f64) -> f64 {
         let idx = if let Some(idx) = idx { idx } else { return 0.0 };
 

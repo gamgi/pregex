@@ -42,16 +42,18 @@ impl From<pest::iterators::Pair<'_, crate::parser::Rule>> for Dist {
 }
 
 impl Dist {
-    pub fn default_from(quantifier_kind: &Kind) -> Dist {
+    pub fn default_from(quantifier_kind: &Kind) -> Option<Dist> {
         match quantifier_kind {
-            Kind::ExactQuantifier(n) => Dist::ExactlyTimes(*n),
-            _ => Dist::Constant(1.0),
+            Kind::ExactQuantifier(n) => Some(Dist::ExactlyTimes(*n)),
+            _ => None,
         }
     }
 }
 
 pub type StateParams = (Dist, f64, u64); // (distribution, p, visits)
 
+/// Evaluate p for state arrows (state.outs) from base p (p0) and
+/// state's distribution parameters.
 pub fn evaluate(p0: f64, params: Option<&StateParams>) -> (f64, f64) {
     if let Some((dist, _, n)) = params {
         return match dist {

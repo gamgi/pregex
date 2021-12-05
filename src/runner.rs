@@ -43,10 +43,13 @@ mod test {
                 },
                 (Some(2), None),
             ),
-            State::new(AstNode {
-                length: 1,
-                kind: Kind::Terminal,
-            }),
+            State::new(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Terminal,
+                },
+                None,
+            ),
         ];
         assert_eq!(matches(&nfa, "ab"), true);
         assert_eq!(matches(&nfa, "bb"), false);
@@ -85,10 +88,13 @@ mod test {
                 },
                 (Some(4), None),
             ),
-            State::new(AstNode {
-                length: 1,
-                kind: Kind::Terminal,
-            }),
+            State::new(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Terminal,
+                },
+                None,
+            ),
         ];
         assert_eq!(matches(&nfa, "a"), true);
         assert_eq!(matches(&nfa, "ax"), true);
@@ -128,10 +134,7 @@ mod test {
                 },
                 (Some(4), None),
             ),
-            State::new(AstNode {
-                length: 1,
-                kind: Kind::Terminal,
-            }),
+            State::terminal(),
         ];
         assert_eq!(matches(&nfa, "a"), false);
         assert_eq!(matches(&nfa, "b"), true);
@@ -179,10 +182,7 @@ mod test {
                 },
                 (Some(5), None),
             ),
-            State::new(AstNode {
-                length: 1,
-                kind: Kind::Terminal,
-            }),
+            State::terminal(),
         ];
         assert_eq!(matches(&nfa, "a"), false);
         assert_eq!(matches(&nfa, "ab"), false);
@@ -224,10 +224,7 @@ mod test {
                 },
                 (Some(4), None),
             ),
-            State::new(AstNode {
-                length: 1,
-                kind: Kind::Terminal,
-            }),
+            State::terminal(),
         ];
         assert_eq!(matches(&nfa, "a"), false);
         assert_eq!(matches(&nfa, "ab"), false);
@@ -269,10 +266,7 @@ mod test {
                 },
                 (Some(4), None),
             ),
-            State::new(AstNode {
-                length: 1,
-                kind: Kind::Terminal,
-            }),
+            State::terminal(),
         ];
         assert_eq!(matches(&nfa, "a"), false);
         assert_eq!(matches(&nfa, "ab"), false);
@@ -286,7 +280,7 @@ mod test {
     #[test]
     fn test_matches_exact_quantifier() {
         let nfa = vec![
-            State::start(1),
+            State::start(Some(1)),
             State::from(
                 AstNode {
                     length: 1,
@@ -308,10 +302,7 @@ mod test {
                 },
                 (Some(4), None),
             ),
-            State::new(AstNode {
-                length: 0,
-                kind: Kind::Terminal,
-            }),
+            State::terminal(),
         ];
         assert_eq!(matches(&nfa, "a"), false);
         assert_eq!(matches(&nfa, "aa"), false);
