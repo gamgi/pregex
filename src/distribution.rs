@@ -28,7 +28,7 @@ impl fmt::Display for Dist {
 impl From<pest::iterators::Pair<'_, crate::parser::Rule>> for Dist {
     fn from(quantifier_dist_pair: pest::iterators::Pair<'_, crate::parser::Rule>) -> Self {
         let (name, param) = quantifier_dist_pair.into_inner().collect_tuple().unwrap();
-        let name = name.to_string().to_lowercase();
+        let name = name.as_span().as_str().to_lowercase();
         match name.as_str() {
             "geo" => {
                 let p: f64 = param.as_str().parse().unwrap();

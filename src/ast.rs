@@ -29,7 +29,11 @@ impl fmt::Display for Kind {
             Kind::Literal(c) => write!(f, "{}", c),
             Kind::Concatenation(l, r) => write!(f, "{}{}.", l, r),
             Kind::Quantified(r, l, Some(q)) => write!(f, "{}{{{}{}}}", l, r, q),
-            Kind::Quantified(r, l, None) => write!(f, "{}{{{}}}", l, r),
+            Kind::Quantified(r, l, None) => match r.kind {
+                Kind::Quantifier(_) => write!(f, "{}{}", l, r),
+                Kind::ExactQuantifier(_) => write!(f, "{}{{{}}}", l, r),
+                _ => unreachable!(),
+            },
             Kind::Quantifier(c) => write!(f, "{}", c),
             Kind::ExactQuantifier(n) => write!(f, "{}", n),
             Kind::Alternation(l, r) => write!(f, "{}|{}", l, r),
@@ -81,7 +85,7 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
             // pair.next is Option<QuantifierDist>
             let quantifier_dist = match pair.next() {
                 Some(pair) => Some(Dist::from(pair)),
-                None => Some(Dist::default_from(&quantifier_ast.kind)),
+                None => Dist::default_from(&quantifier_ast.kind),
             };
             AstNode {
                 length: left_ast.length + quantifier_ast.length,
