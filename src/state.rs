@@ -2,6 +2,7 @@
 use crate::ast::{AstNode, Kind};
 use crate::distribution::{evaluate, Dist, StateParams};
 use crate::nfa::State;
+use crate::utils;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
@@ -79,7 +80,7 @@ impl NfaState<'_> {
                 debug!("    skip {}", state.kind);
                 return 0.0;
             }
-            debug!("    add {} p={}", state.kind, p);
+            // debug!("    add {} p={}", state.kind, p);
 
             match state.kind {
                 Kind::Terminal => {
@@ -89,6 +90,7 @@ impl NfaState<'_> {
                 Kind::Quantifier(_) | Kind::Start | Kind::Split | Kind::ExactQuantifier(_) => {
                     let params = self.get_params(idx);
                     let (p0, p1) = evaluate(p, params);
+                    debug!("    eval p0={} {:?}", p, params);
                     return f64::max(
                         self.add_state(state.outs.0, force, p0),
                         self.add_state(state.outs.1, force, p1),
@@ -103,8 +105,15 @@ impl NfaState<'_> {
     }
 
     pub fn init_state(&mut self, idx: Option<usize>, force: bool) {
+        debug!("init");
         self.add_state(idx, force, 1.0);
         self.visited.drain();
+        debug!(
+            "  flush {}",
+            utils::probs(&self.current_states_params).iter().enumerate()
+                .map(|(i, p)| format!("p({})={}", self.nfa[i].kind, p))
+                .join(" ")
+        );
     }
 
     pub fn step(&mut self, token: char) -> f64 {
@@ -140,16 +149,15 @@ impl NfaState<'_> {
 
         self.current_states.drain();
         self.update_states_counts(&new_states);
-        debug!(
-            "  flush {}",
-            self.current_states_params
-                .iter()
-                .map(|(k, v)| format!("p({})={}", k, v.1))
-                .join(" ")
-        );
         result = f64::max(result, self.add_states(&new_states, false));
         self.visited.drain();
-        debug!("  p terminal={}", result);
+        debug!(
+            "  flush {}",
+            utils::probs(&self.current_states_params).iter().enumerate()
+                .map(|(i, p)| format!("p({})={}", self.nfa[i].kind, p))
+                .join(" ")
+        );
+        debug!("  check p terminal={}", result);
         return result;
     }
 
@@ -369,32 +377,37 @@ mod test {
                 (Some(0), Some(2)),
                 Some(Dist::ExactlyTimes(2)),
             ),
-            State::from(
-                AstNode {
-                    length: 1,
-                    kind: Kind::Terminal,
-                },
-                (None, None),
-            ),
+            State::terminal(),
         ];
         let mut state = NfaState::new(&nfa);
         state.init_state(Some(0), true);
         assert_eq!(state.step('a'), 0.0);
-        let probs = state
-            .current_states_params
-            .keys()
-            .sorted()
-            .map(|k| state.current_states_params[k].1)
-            .collect::<Vec<f64>>();
-        assert_eq!(probs, vec![1.0, 0.0, 0.0]);
+        assert_eq!(utils::probs(&state.current_states_params), vec![1.0, 0.0, 0.0]);
 
         assert_eq!(state.step('a'), 1.0);
-        let probs = state
-            .current_states_params
-            .keys()
-            .sorted()
-            .map(|k| state.current_states_params[k].1)
-            .collect::<Vec<f64>>();
-        assert_eq!(probs, vec![0.0, 0.0, 1.0]);
+        assert_eq!(utils::probs(&state.current_states_params), vec![0.0, 0.0, 1.0]);
+    }
+
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(2), None),
+            ),
+            State::new(
+                Kind::ExactQuantifier(2),
+                (Some(1), Some(2)),
+                Some(Dist::PGeometric(1.0)), // TODO with also 0.5
+            ),
+            State::terminal(),
+        ];
+        let mut state = NfaState::new(&nfa);
+        state.init_state(Some(0), true);
+        assert_eq!(state.step('a'), 0.0);
+        assert_eq!(utils::probs(&state.current_states_params), vec![0.0, 1.0, 0.0]);
+
+        assert_eq!(state.step('a'), 0.0);
+        assert_eq!(utils::probs(&state.current_states_params), vec![0.0, 0.125, 0.25]);
     }
 }
