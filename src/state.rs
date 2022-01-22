@@ -2,6 +2,7 @@
 use crate::ast::{AstNode, Kind};
 use crate::distribution::{evaluate, Dist, StateParams};
 use crate::nfa::State;
+use crate::utils;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
@@ -9,7 +10,7 @@ pub struct NfaState<'a> {
     nfa: &'a Vec<State>,
     visited: HashSet<usize>,
     pub current_states: HashSet<usize>,
-    state_params: HashMap<usize, StateParams>,
+    current_states_params: HashMap<usize, StateParams>,
 }
 
 fn find_max<'a, I>(vals: I) -> f64
@@ -24,8 +25,8 @@ impl NfaState<'_> {
         return NfaState {
             nfa: nfa,
             current_states: HashSet::new(),
+            current_states_params: HashMap::new(),
             visited: HashSet::new(),
-            state_params: HashMap::new(),
         };
     }
 
@@ -36,6 +37,7 @@ impl NfaState<'_> {
             .for_each(|(i, p)| self.update_state(*i, 0.0, true));
     }
 
+    /// Add states to set of possible states. Returns max(p(terminal)).
     pub fn add_states(&mut self, states: &HashMap<usize, f64>, force: bool) -> f64 {
         find_max(
             states
@@ -45,63 +47,57 @@ impl NfaState<'_> {
     }
 
     fn get_count(&self, idx: usize) -> u64 {
-        if let Some(params) = self.state_params.get(&idx) {
+        if let Some(params) = self.current_states_params.get(&idx) {
             return params.2;
         }
         0
     }
 
-    fn get_state(&self, i: usize) -> (f64, &State) {
-        let p = match self.state_params.get(&i) {
+    fn get_state(&self, idx: usize) -> (f64, &State) {
+        let p = match self.current_states_params.get(&idx) {
             Some(params) => params.1,
             None => 0.0,
         };
-        let state = &self.nfa[i];
+        let state = &self.nfa[idx];
         return (p, state);
     }
 
-    fn get_params(&mut self, i: usize) -> &mut StateParams {
-        let state = &self.nfa[i];
-        match state.kind {
-            Kind::ExactQuantifier(n) => {
-                self.state_params
-                    .entry(i)
-                    .or_insert((Dist::ExactlyTimes(n), 0.0, 0))
-            }
-            _ => self
-                .state_params
-                .entry(i)
-                .or_insert((Dist::Constant(1.0), 0.0, 0)),
-        }
+    fn get_params(&mut self, idx: usize) -> &mut StateParams {
+        let state = &self.nfa[idx];
+        self.current_states_params
+            .entry(idx)
+            .or_insert((state.params.clone(), 0.0, 0))
     }
 
+    /// Add state to set of possible states. Returns max(p(terminal)).
     pub fn add_state(&mut self, idx: Option<usize>, force: bool, p: f64) -> f64 {
-        let i = if let Some(i) = idx { i } else { return 0.0 };
+        let idx = if let Some(idx) = idx { idx } else { return 0.0 };
 
-        if let Some(state) = self.nfa.get(i) {
-            let is_previously_visited = !self.visited.insert(i);
+        if let Some(state) = self.nfa.get(idx) {
+            let is_previously_visited = !self.visited.insert(idx);
             if is_previously_visited && !force {
                 // TODO still update p
                 debug!("    skip {}", state.kind);
                 return 0.0;
             }
-            debug!("    add {} p={}", state.kind, p);
+            // debug!("    add {} p={}", state.kind, p);
 
             match state.kind {
                 Kind::Terminal => {
-                    self.update_state(i, p, false);
+                    self.update_state(idx, p, false);
                     return p;
                 }
                 Kind::Quantifier(_) | Kind::Start | Kind::Split | Kind::ExactQuantifier(_) => {
-                    let params = self.get_params(i);
-                    let (p0, p1) = evaluate(p, Some(params));
+                    let params = self.get_params(idx);
+                    let (p0, p1) = evaluate(p, params);
+                    debug!("    eval p0={} {:?}", p, params);
                     return f64::max(
                         self.add_state(state.outs.0, force, p0),
                         self.add_state(state.outs.1, force, p1),
                     );
                 }
                 _ => {
-                    self.update_state(i, p, false);
+                    self.update_state(idx, p, false);
                 }
             }
         }
@@ -109,8 +105,15 @@ impl NfaState<'_> {
     }
 
     pub fn init_state(&mut self, idx: Option<usize>, force: bool) {
+        debug!("init");
         self.add_state(idx, force, 1.0);
         self.visited.drain();
+        debug!(
+            "  flush {}",
+            utils::probs(&self.current_states_params).iter().enumerate()
+                .map(|(i, p)| format!("p({})={}", self.nfa[i].kind, p))
+                .join(" ")
+        );
     }
 
     pub fn step(&mut self, token: char) -> f64 {
@@ -146,16 +149,15 @@ impl NfaState<'_> {
 
         self.current_states.drain();
         self.update_states_counts(&new_states);
-        debug!(
-            "  flush {}",
-            self.state_params
-                .iter()
-                .map(|(k, v)| format!("p({})={}", k, v.1))
-                .join(" ")
-        );
         result = f64::max(result, self.add_states(&new_states, false));
         self.visited.drain();
-        debug!("  p terminal={}", result);
+        debug!(
+            "  flush {}",
+            utils::probs(&self.current_states_params).iter().enumerate()
+                .map(|(i, p)| format!("p({})={}", self.nfa[i].kind, p))
+                .join(" ")
+        );
+        debug!("  check p terminal={}", result);
         return result;
     }
 
@@ -211,8 +213,8 @@ mod test {
         state.init_state(Some(0), true);
         assert_eq!(state.current_states.len(), 1);
         assert_eq!(
-            *state.state_params.get(&1).unwrap(),
-            (Dist::Constant(1.0), 1.0, 0)
+            *state.current_states_params.get(&1).unwrap(),
+            (None, 1.0, 0)
         );
         assert_eq!(state.visited.len(), 0);
     }
@@ -361,7 +363,7 @@ mod test {
     }
 
     #[test]
-    fn test_state_probs() {
+    fn test_state_p_exact_quantifier() {
         let nfa = vec![
             State::from(
                 AstNode {
@@ -370,39 +372,64 @@ mod test {
                 },
                 (Some(1), None),
             ),
-            State::from(
-                AstNode {
-                    length: 1,
-                    kind: Kind::ExactQuantifier(2),
-                },
+            State::new(
+                Kind::ExactQuantifier(2),
                 (Some(0), Some(2)),
+                Some(Dist::ExactlyTimes(2)),
             ),
-            State::from(
-                AstNode {
-                    length: 1,
-                    kind: Kind::Terminal,
-                },
-                (None, None),
-            ),
+            State::terminal(),
         ];
         let mut state = NfaState::new(&nfa);
         state.init_state(Some(0), true);
         assert_eq!(state.step('a'), 0.0);
-        let probs = state
-            .state_params
-            .keys()
-            .sorted()
-            .map(|k| state.state_params[k].1)
-            .collect::<Vec<f64>>();
-        assert_eq!(probs, vec![1.0, 0.0, 0.0]);
+        assert_eq!(
+            utils::probs(&state.current_states_params),
+            vec![1.0, 0.0, 0.0]
+        );
 
         assert_eq!(state.step('a'), 1.0);
-        let probs = state
-            .state_params
-            .keys()
-            .sorted()
-            .map(|k| state.state_params[k].1)
-            .collect::<Vec<f64>>();
-        assert_eq!(probs, vec![0.0, 0.0, 1.0]);
+        assert_eq!(
+            utils::probs(&state.current_states_params),
+            vec![0.0, 0.0, 1.0]
+        );
+    }
+
+    #[test]
+    fn test_state_p_geo_quantifier() {
+        let nfa = vec![
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(1), None),
+            ),
+            State::new(
+                Kind::ExactQuantifier(2),
+                (Some(0), Some(2)),
+                Some(Dist::PGeometric(2, 0.5)),
+            ),
+            State::terminal(),
+        ];
+        let mut state = NfaState::new(&nfa);
+        state.init_state(Some(0), true);
+        assert_eq!(state.step('a'), 0.0);
+
+        assert_eq!(
+            utils::probs(&state.current_states_params),
+            vec![1.0, 0.0, 0.0]
+        );
+
+        assert_eq!(state.step('a'), 0.5);
+        assert_eq!(
+            utils::probs(&state.current_states_params),
+            vec![0.5, 0.0, 0.5]
+        );
+
+        assert_eq!(state.step('a'), 0.5);
+        assert_eq!(
+            utils::probs(&state.current_states_params),
+            vec![0.125, 0.0, 0.375]
+        );
     }
 }

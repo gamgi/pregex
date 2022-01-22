@@ -20,6 +20,7 @@ mod distribution;
 mod nfa;
 mod parser;
 mod runner;
+mod utils;
 mod state;
 use config::{parse_options, PATTERN_OPTION, STRING_OPTION};
 
