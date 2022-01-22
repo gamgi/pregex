@@ -1,6 +1,6 @@
 #![allow(dead_code, unused_variables)]
 use crate::ast::{AstNode, Kind};
-use crate::nfa::State;
+use crate::nfa::{State, StateParams};
 use itertools::Itertools;
 use pest;
 use statrs::distribution::{Discrete, Geometric};
@@ -60,37 +60,25 @@ impl Dist {
     }
 }
 
-impl Dist {
-    pub fn default_from(quantifier_kind: &Kind) -> Option<Dist> {
-        match quantifier_kind {
-            Kind::ExactQuantifier(n) => Some(Dist::ExactlyTimes(*n)),
-            _ => None,
-        }
-    }
-}
-
-pub type StateParams = (Option<Dist>, f64, u64); // (distribution, p, visits)
-
-/// Evaluate p for state arrows (state.outs) from base p (p0) and
-/// state's distribution parameters.
-pub fn evaluate(p0: f64, params: &StateParams) -> (f64, f64) {
-    if let (Some(dist), _, n) = params {
+/// Evaluate p for state arrows (state.outs) from p0 and number of visits to current node
+pub fn evaluate(p0: f64, dist: &Option<Dist>, n: u64) -> (f64, f64) {
+    if let Some(dist) = dist {
         return match dist {
             Dist::Constant(p) => (p0 * p, p0 * p),
             Dist::ExactlyTimes(match_n) => {
-                if n == match_n {
+                if n == *match_n {
                     (0.0, p0)
-                } else if n < match_n {
+                } else if n < *match_n {
                     (p0, 0.0)
                 } else {
                     (0.0, 0.0)
                 }
             }
             Dist::PGeometric(match_n, c) => {
-                if *n < *match_n {
+                if n < *match_n {
                     return (p0, 0.0);
                 }
-                let x = *n - *match_n + 1;
+                let x = n - match_n + 1;
                 let p = Geometric::new(*c).unwrap().pmf(x);
                 (p * p0, (1.0 - p) * p0)
             }
@@ -104,82 +92,49 @@ mod test {
     use super::*;
     #[test]
     fn test_distribution_constant() {
-        assert_eq!(
-            evaluate(1.0, &(Some(Dist::Constant(1.0)), 0.0, 1)),
-            (1.0, 1.0)
-        );
-        assert_eq!(
-            evaluate(0.5, &(Some(Dist::Constant(1.0)), 0.0, 1)),
-            (0.5, 0.5)
-        );
-        assert_eq!(
-            evaluate(1.0, &(Some(Dist::Constant(0.5)), 0.0, 1)),
-            (0.5, 0.5)
-        );
+        assert_eq!(evaluate(1.0, &Some(Dist::Constant(1.0)), 1), (1.0, 1.0));
+        assert_eq!(evaluate(0.5, &Some(Dist::Constant(1.0)), 1), (0.5, 0.5));
+        assert_eq!(evaluate(1.0, &Some(Dist::Constant(0.5)), 1), (0.5, 0.5));
     }
 
     #[test]
     fn test_distribution_exactly_times() {
-        assert_eq!(
-            evaluate(1.0, &(Some(Dist::ExactlyTimes(2)), 0.0, 0)),
-            (1.0, 0.0)
-        );
-        assert_eq!(
-            evaluate(1.0, &(Some(Dist::ExactlyTimes(2)), 0.0, 1)),
-            (1.0, 0.0)
-        );
-        assert_eq!(
-            evaluate(1.0, &(Some(Dist::ExactlyTimes(2)), 0.0, 2)),
-            (0.0, 1.0)
-        );
-        assert_eq!(
-            evaluate(1.0, &(Some(Dist::ExactlyTimes(2)), 0.0, 3)),
-            (0.0, 0.0)
-        );
+        assert_eq!(evaluate(1.0, &Some(Dist::ExactlyTimes(2)), 0), (1.0, 0.0));
+        assert_eq!(evaluate(1.0, &Some(Dist::ExactlyTimes(2)), 1), (1.0, 0.0));
+        assert_eq!(evaluate(1.0, &Some(Dist::ExactlyTimes(2)), 2), (0.0, 1.0));
+        assert_eq!(evaluate(1.0, &Some(Dist::ExactlyTimes(2)), 3), (0.0, 0.0));
 
-        assert_eq!(
-            evaluate(0.5, &(Some(Dist::ExactlyTimes(2)), 0.0, 0)),
-            (0.5, 0.0)
-        );
-        assert_eq!(
-            evaluate(0.5, &(Some(Dist::ExactlyTimes(2)), 0.0, 1)),
-            (0.5, 0.0)
-        );
-        assert_eq!(
-            evaluate(0.5, &(Some(Dist::ExactlyTimes(2)), 0.0, 2)),
-            (0.0, 0.5)
-        );
-        assert_eq!(
-            evaluate(0.5, &(Some(Dist::ExactlyTimes(2)), 0.0, 3)),
-            (0.0, 0.0)
-        );
+        assert_eq!(evaluate(0.5, &Some(Dist::ExactlyTimes(2)), 0), (0.5, 0.0));
+        assert_eq!(evaluate(0.5, &Some(Dist::ExactlyTimes(2)), 1), (0.5, 0.0));
+        assert_eq!(evaluate(0.5, &Some(Dist::ExactlyTimes(2)), 2), (0.0, 0.5));
+        assert_eq!(evaluate(0.5, &Some(Dist::ExactlyTimes(2)), 3), (0.0, 0.0));
     }
 
     #[test]
     fn test_distribution_geometric_1_or_more() {
         assert_eq!(
-            evaluate(1.0, &(Some(Dist::PGeometric(1, 0.5)), 0.0, 0)),
+            evaluate(1.0, &Some(Dist::PGeometric(1, 0.5)), 0),
             (1.0, 0.0)
         );
         assert_eq!(
-            evaluate(1.0, &(Some(Dist::PGeometric(1, 0.5)), 0.0, 1)),
+            evaluate(1.0, &Some(Dist::PGeometric(1, 0.5)), 1),
             (0.5, 0.5)
         );
         assert_eq!(
-            evaluate(1.0, &(Some(Dist::PGeometric(1, 0.5)), 0.0, 2)),
+            evaluate(1.0, &Some(Dist::PGeometric(1, 0.5)), 2),
             (0.25, 0.75)
         );
 
         assert_eq!(
-            evaluate(0.5, &(Some(Dist::PGeometric(1, 0.5)), 0.0, 0)),
+            evaluate(0.5, &Some(Dist::PGeometric(1, 0.5)), 0),
             (0.5, 0.0)
         );
         assert_eq!(
-            evaluate(0.5, &(Some(Dist::PGeometric(1, 0.5)), 0.0, 1)),
+            evaluate(0.5, &Some(Dist::PGeometric(1, 0.5)), 1),
             (0.25, 0.25)
         );
         assert_eq!(
-            evaluate(0.5, &(Some(Dist::PGeometric(1, 0.5)), 0.0, 2)),
+            evaluate(0.5, &Some(Dist::PGeometric(1, 0.5)), 2),
             (0.125, 0.375)
         );
     }
@@ -187,28 +142,28 @@ mod test {
     #[test]
     fn test_distribution_geometric_2_or_more() {
         assert_eq!(
-            evaluate(1.0, &(Some(Dist::PGeometric(2, 0.5)), 0.0, 0)),
+            evaluate(1.0, &Some(Dist::PGeometric(2, 0.5)), 0),
             (1.0, 0.0)
         );
         assert_eq!(
-            evaluate(1.0, &(Some(Dist::PGeometric(2, 0.5)), 0.0, 1)),
+            evaluate(1.0, &Some(Dist::PGeometric(2, 0.5)), 1),
             (1.0, 0.0)
         );
         assert_eq!(
-            evaluate(1.0, &(Some(Dist::PGeometric(2, 0.5)), 0.0, 2)),
+            evaluate(1.0, &Some(Dist::PGeometric(2, 0.5)), 2),
             (0.5, 0.5)
         );
 
         assert_eq!(
-            evaluate(0.5, &(Some(Dist::PGeometric(2, 0.5)), 0.0, 0)),
+            evaluate(0.5, &Some(Dist::PGeometric(2, 0.5)), 0),
             (0.5, 0.0)
         );
         assert_eq!(
-            evaluate(0.5, &(Some(Dist::PGeometric(2, 0.5)), 0.0, 1)),
+            evaluate(0.5, &Some(Dist::PGeometric(2, 0.5)), 1),
             (0.5, 0.0)
         );
         assert_eq!(
-            evaluate(0.5, &(Some(Dist::PGeometric(2, 0.5)), 0.0, 2)),
+            evaluate(0.5, &Some(Dist::PGeometric(2, 0.5)), 2),
             (0.25, 0.25)
         );
     }

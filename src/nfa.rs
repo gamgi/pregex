@@ -1,5 +1,5 @@
 use crate::ast::{AstNode, Kind};
-use crate::distribution::{Dist, StateParams};
+use crate::distribution::Dist;
 use crate::parser::parse;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -7,6 +7,18 @@ pub struct State {
     pub kind: Kind,
     pub outs: Outs,
     pub dist: Option<Dist>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct StateParams {
+    pub p: f64, // current p
+    pub n: u64, // visit count
+}
+
+impl StateParams {
+    pub fn new(p: f64, n: u64) -> Self {
+        Self { p, n }
+    }
 }
 
 impl State {
