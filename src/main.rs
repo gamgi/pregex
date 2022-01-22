@@ -44,9 +44,9 @@ fn main() -> Result<()> {
                 eprintln!("Failed to read input: {}", err);
                 exit(1);
             }
-            Ok(input_string) => match runner::matches(&nfa, &input_string) {
-                true => println!("{}", input_string),
-                false => {}
+            Ok(input_string) => match runner::match_p(&nfa, &input_string) {
+                Some(p) => println!("{}\t{}", p, input_string),
+                None => {}
             },
         }
     }
