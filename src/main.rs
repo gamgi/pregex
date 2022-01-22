@@ -10,42 +10,33 @@ extern crate log;
 extern crate env_logger;
 
 extern crate clap;
-use clap::{App, Arg, ArgMatches};
-
-use log::Level;
+use {
+    clap::{App, Arg, ArgMatches},
+    log::Level,
+    std::error::Error,
+};
 
 mod ast;
-mod config;
+mod cli;
 mod distribution;
 mod nfa;
 mod parser;
 mod runner;
 mod state;
 mod utils;
-use config::{parse_options, PATTERN_OPTION, STRING_OPTION};
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
 
-fn main() -> Result<(), String> {
+fn main() -> Result<()> {
     env_logger::init();
-    let options = App::new("Pregex")
-        .version(VERSION)
-        .arg(Arg::with_name("pattern").help("Regexp pattern").index(1))
-        .arg(
-            Arg::with_name("string")
-                .help("String to match against")
-                .index(2),
-        )
-        .get_matches();
+    let matches = cli::options().get_matches();
+    let config = cli::parse_options(matches)?;
 
-    let config = parse_options(options)?;
-    let asts = parser::parse(&config.pattern).unwrap_or_else(|error| {
-        panic!("{}", error);
-    });
+    let asts = parser::parse(&config.pattern)?;
 
     let nfa = nfa::asts_to_nfa(asts);
-    match runner::matches(&nfa, &config.string) {
-        true => println!("{}", config.string),
+    match runner::matches(&nfa, &config.input_string) {
+        true => println!("{}", config.input_string),
         false => {}
     };
 
