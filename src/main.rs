@@ -20,8 +20,8 @@ mod distribution;
 mod nfa;
 mod parser;
 mod runner;
-mod utils;
 mod state;
+mod utils;
 use config::{parse_options, PATTERN_OPTION, STRING_OPTION};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");

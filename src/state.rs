@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_variables)]
 use crate::ast::{AstNode, Kind};
-use crate::distribution::{evaluate, Dist, StateParams};
-use crate::nfa::State;
+use crate::distribution::{evaluate, Dist};
+use crate::nfa::{State, StateParams};
 use crate::utils;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
@@ -48,25 +48,25 @@ impl NfaState<'_> {
 
     fn get_count(&self, idx: usize) -> u64 {
         if let Some(params) = self.current_states_params.get(&idx) {
-            return params.2;
+            return params.n;
         }
         0
     }
 
     fn get_state(&self, idx: usize) -> (f64, &State) {
         let p = match self.current_states_params.get(&idx) {
-            Some(params) => params.1,
+            Some(params) => params.p,
             None => 0.0,
         };
         let state = &self.nfa[idx];
         return (p, state);
     }
 
-    fn get_params(&mut self, idx: usize) -> &mut StateParams {
+    fn get_params_mut(&mut self, idx: usize) -> &mut StateParams {
         let state = &self.nfa[idx];
         self.current_states_params
             .entry(idx)
-            .or_insert((state.params.clone(), 0.0, 0))
+            .or_insert(StateParams::new(0.0, 0))
     }
 
     /// Add state to set of possible states. Returns max(p(terminal)).
@@ -88,8 +88,8 @@ impl NfaState<'_> {
                     return p;
                 }
                 Kind::Quantifier(_) | Kind::Start | Kind::Split | Kind::ExactQuantifier(_) => {
-                    let params = self.get_params(idx);
-                    let (p0, p1) = evaluate(p, params);
+                    let params = self.get_params_mut(idx);
+                    let (p0, p1) = evaluate(p, &state.dist, params.n);
                     debug!("    eval p0={} {:?}", p, params);
                     return f64::max(
                         self.add_state(state.outs.0, force, p0),
@@ -110,7 +110,9 @@ impl NfaState<'_> {
         self.visited.drain();
         debug!(
             "  flush {}",
-            utils::probs(&self.current_states_params).iter().enumerate()
+            utils::probs(&self.current_states_params)
+                .iter()
+                .enumerate()
                 .map(|(i, p)| format!("p({})={}", self.nfa[i].kind, p))
                 .join(" ")
         );
@@ -153,7 +155,9 @@ impl NfaState<'_> {
         self.visited.drain();
         debug!(
             "  flush {}",
-            utils::probs(&self.current_states_params).iter().enumerate()
+            utils::probs(&self.current_states_params)
+                .iter()
+                .enumerate()
                 .map(|(i, p)| format!("p({})={}", self.nfa[i].kind, p))
                 .join(" ")
         );
@@ -164,23 +168,22 @@ impl NfaState<'_> {
     fn update_state(&mut self, i: usize, p: f64, count: bool) {
         let state = &self.nfa[i];
         debug!("      update {} p={} {}", state.kind, p, count);
-
         match state.kind {
             Kind::ExactQuantifier(n) => {
-                let mut params = self.get_params(i);
-                // params.1 = f64::max(params.1, p);
-                params.1 = p;
+                let mut params = self.get_params_mut(i);
+                // params.p = f64::max(params.p, p);
+                params.p = p;
                 if count {
-                    params.2 += 1;
+                    params.n += 1;
                 }
             }
             _ => {
                 self.current_states.insert(i);
-                let mut params = self.get_params(i);
-                // params.1 = f64::max(params.1, p);
-                params.1 = p;
+                let mut params = self.get_params_mut(i);
+                // params.p = f64::max(params.p, p);
+                params.p = p;
                 if count {
-                    params.2 += 1;
+                    params.n += 1;
                 }
             }
         }
@@ -214,7 +217,7 @@ mod test {
         assert_eq!(state.current_states.len(), 1);
         assert_eq!(
             *state.current_states_params.get(&1).unwrap(),
-            (None, 1.0, 0)
+            StateParams::new(1.0, 0)
         );
         assert_eq!(state.visited.len(), 0);
     }
