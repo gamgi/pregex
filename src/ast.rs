@@ -82,9 +82,9 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
             let left_ast = build_ast_from_expr(pair.next().unwrap());
             // pair.next is ShortQuantifier or LongQuantifier
             let quantifier_ast = build_ast_from_expr(pair.next().unwrap());
-            // pair.next is Option<QuantifierDist>
+            // pair.next is Option<Dist>
             let quantifier_dist = match pair.next() {
-                Some(pair) => Some(Dist::from(pair)),
+                Some(pair) => Some(Dist::complete_from(&quantifier_ast.kind, pair)),
                 None => Dist::default_from(&quantifier_ast.kind),
             };
             AstNode {

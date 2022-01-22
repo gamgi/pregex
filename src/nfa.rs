@@ -613,7 +613,7 @@ mod test {
                                 length: 1,
                                 kind: Kind::Literal('b'),
                             }),
-                            Some(Dist::PGeometric(0.5)),
+                            Some(Dist::PGeometric(2, 0.5)),
                         ),
                     }),
                 ),
@@ -639,7 +639,7 @@ mod test {
             State::new(
                 Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
-                Some(Dist::PGeometric(0.5)),
+                Some(Dist::PGeometric(2, 0.5)),
             ),
         ];
         assert_eq!(result, expected);

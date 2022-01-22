@@ -178,7 +178,7 @@ mod test {
                         length: 1,
                         kind: Kind::Literal('a'),
                     }),
-                    Some(Dist::PGeometric(0.5)),
+                    Some(Dist::PGeometric(2, 0.5)),
                 ),
             },
             AstNode {

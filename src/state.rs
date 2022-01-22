@@ -382,32 +382,54 @@ mod test {
         let mut state = NfaState::new(&nfa);
         state.init_state(Some(0), true);
         assert_eq!(state.step('a'), 0.0);
-        assert_eq!(utils::probs(&state.current_states_params), vec![1.0, 0.0, 0.0]);
+        assert_eq!(
+            utils::probs(&state.current_states_params),
+            vec![1.0, 0.0, 0.0]
+        );
 
         assert_eq!(state.step('a'), 1.0);
-        assert_eq!(utils::probs(&state.current_states_params), vec![0.0, 0.0, 1.0]);
+        assert_eq!(
+            utils::probs(&state.current_states_params),
+            vec![0.0, 0.0, 1.0]
+        );
     }
 
+    #[test]
+    fn test_state_p_geo_quantifier() {
+        let nfa = vec![
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('a'),
                 },
-                (Some(2), None),
+                (Some(1), None),
             ),
             State::new(
                 Kind::ExactQuantifier(2),
-                (Some(1), Some(2)),
-                Some(Dist::PGeometric(1.0)), // TODO with also 0.5
+                (Some(0), Some(2)),
+                Some(Dist::PGeometric(2, 0.5)),
             ),
             State::terminal(),
         ];
         let mut state = NfaState::new(&nfa);
         state.init_state(Some(0), true);
         assert_eq!(state.step('a'), 0.0);
-        assert_eq!(utils::probs(&state.current_states_params), vec![0.0, 1.0, 0.0]);
 
-        assert_eq!(state.step('a'), 0.0);
-        assert_eq!(utils::probs(&state.current_states_params), vec![0.0, 0.125, 0.25]);
+        assert_eq!(
+            utils::probs(&state.current_states_params),
+            vec![1.0, 0.0, 0.0]
+        );
+
+        assert_eq!(state.step('a'), 0.5);
+        assert_eq!(
+            utils::probs(&state.current_states_params),
+            vec![0.5, 0.0, 0.5]
+        );
+
+        assert_eq!(state.step('a'), 0.5);
+        assert_eq!(
+            utils::probs(&state.current_states_params),
+            vec![0.125, 0.0, 0.375]
+        );
     }
 }
