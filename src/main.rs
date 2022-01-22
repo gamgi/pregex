@@ -10,44 +10,65 @@ extern crate log;
 extern crate env_logger;
 
 extern crate clap;
-use clap::{App, Arg, ArgMatches};
-
-use log::Level;
+use {
+    clap::{App, Arg, ArgMatches},
+    log::Level,
+    std::error::Error,
+    std::io::{self, prelude::*, BufReader, Cursor, Read},
+    std::process::exit,
+};
 
 mod ast;
-mod config;
+mod cli;
 mod distribution;
 mod nfa;
 mod parser;
 mod runner;
 mod state;
 mod utils;
-use config::{parse_options, PATTERN_OPTION, STRING_OPTION};
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
 
-fn main() -> Result<(), String> {
+fn main() -> Result<()> {
     env_logger::init();
-    let options = App::new("Pregex")
-        .version(VERSION)
-        .arg(Arg::with_name("pattern").help("Regexp pattern").index(1))
-        .arg(
-            Arg::with_name("string")
-                .help("String to match against")
-                .index(2),
-        )
-        .get_matches();
+    let matches = cli::options().get_matches();
+    let config = cli::parse_options(matches)?;
 
-    let config = parse_options(options)?;
-    let asts = parser::parse(&config.pattern).unwrap_or_else(|error| {
-        panic!("{}", error);
-    });
-
+    let asts = parser::parse(&config.pattern)?;
     let nfa = nfa::asts_to_nfa(asts);
-    match runner::matches(&nfa, &config.string) {
-        true => println!("{}", config.string),
-        false => {}
-    };
+
+    let reader = input_reader(&config)?;
+    for line in reader.lines() {
+        match line {
+            Err(err) => {
+                eprintln!("Failed to read input: {}", err);
+                exit(1);
+            }
+            Ok(input_string) => match runner::match_p(&nfa, &input_string) {
+                Some(p) => println!("{}\t{}", p, input_string),
+                None => {}
+            },
+        }
+    }
 
     Ok(())
+}
+
+/// Get input reader based on config
+///
+/// If input_file is set, it has precedence over input_string
+/// If input_file is "-", returns reade from stdin.
+/// Otherwise, returns reader from input_string.
+fn input_reader(config: &cli::Config) -> Result<BufReader<Box<dyn Read>>> {
+    use std::fs::File;
+
+    let reader: Box<dyn Read> = match &config.input_file {
+        Some(input_file) => match input_file.as_str() {
+            "-" => Box::new(io::stdin()),
+            _ => Box::new(File::open(input_file)?),
+        },
+        None => Box::new(Cursor::new(config.input_string.to_string())),
+    };
+
+    Ok(BufReader::new(reader))
 }

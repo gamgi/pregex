@@ -13,13 +13,6 @@ pub struct NfaState<'a> {
     current_states_params: HashMap<usize, StateParams>,
 }
 
-fn find_max<'a, I>(vals: I) -> f64
-where
-    I: Iterator<Item = f64>,
-{
-    vals.fold(f64::NEG_INFINITY, |a, b| a.max(b))
-}
-
 impl NfaState<'_> {
     pub fn new(nfa: &Vec<State>) -> NfaState {
         return NfaState {
@@ -39,7 +32,7 @@ impl NfaState<'_> {
 
     /// Add states to set of possible states. Returns max(p(terminal)).
     pub fn add_states(&mut self, states: &HashMap<usize, f64>, force: bool) -> f64 {
-        find_max(
+        utils::find_max(
             states
                 .into_iter()
                 .map(|(i, p)| self.add_state(Some(*i), force, *p)),

@@ -1,5 +1,5 @@
 [package]
-name = "newregex"
+name = "pregex"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,5 +9,5 @@ pest_derive = "2.0"
 itertools = "0.10.0"
 env_logger = "0.8"
 log = "0.4"
-clap = "~2.33.0"
+clap = { version = "3.0.0-beta.1" }
 statrs = "0.15"

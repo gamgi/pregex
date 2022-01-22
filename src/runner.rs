@@ -3,24 +3,28 @@ use crate::ast::{AstNode, Kind};
 use crate::distribution::Dist;
 use crate::nfa::State;
 use crate::state::NfaState;
+use crate::utils;
 use log::Level;
 use std::collections::HashSet;
 
-pub fn matches(nfa: &Vec<State>, string: &str) -> bool {
+pub fn match_p(nfa: &Vec<State>, string: &str) -> Option<f64> {
     if nfa.len() == 0 {
-        return true;
+        return Some(1.);
     }
     let mut state = NfaState::new(nfa);
     state.init_state(Some(0), true);
 
     // step through string
-    for c in string.chars() {
-        if state.step(c) == 1.0 {
-            debug!("match");
-            return true;
-        }
+    let p = utils::find_max(string.chars().map(|c| state.step(c)));
+    Some(p)
+}
+
+pub fn matches(nfa: &Vec<State>, string: &str) -> bool {
+    const THRESHOLD: f64 = 1.0;
+    match match_p(nfa, string) {
+        Some(p) => p >= THRESHOLD,
+        None => false,
     }
-    false
 }
 
 #[cfg(test)]
