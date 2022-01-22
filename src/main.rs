@@ -14,6 +14,8 @@ use {
     clap::{App, Arg, ArgMatches},
     log::Level,
     std::error::Error,
+    std::io::{self, prelude::*, BufReader, Cursor, Read},
+    std::process::exit,
 };
 
 mod ast;
@@ -33,12 +35,40 @@ fn main() -> Result<()> {
     let config = cli::parse_options(matches)?;
 
     let asts = parser::parse(&config.pattern)?;
-
     let nfa = nfa::asts_to_nfa(asts);
-    match runner::matches(&nfa, &config.input_string) {
-        true => println!("{}", config.input_string),
-        false => {}
-    };
+
+    let reader = input_reader(&config)?;
+    for line in reader.lines() {
+        match line {
+            Err(err) => {
+                eprintln!("Failed to read input: {}", err);
+                exit(1);
+            }
+            Ok(input_string) => match runner::matches(&nfa, &input_string) {
+                true => println!("{}", input_string),
+                false => {}
+            },
+        }
+    }
 
     Ok(())
+}
+
+/// Get input reader based on config
+///
+/// If input_file is set, it has precedence over input_string
+/// If input_file is "-", returns reade from stdin.
+/// Otherwise, returns reader from input_string.
+fn input_reader(config: &cli::Config) -> Result<BufReader<Box<dyn Read>>> {
+    use std::fs::File;
+
+    let reader: Box<dyn Read> = match &config.input_file {
+        Some(input_file) => match input_file.as_str() {
+            "-" => Box::new(io::stdin()),
+            _ => Box::new(File::open(input_file)?),
+        },
+        None => Box::new(Cursor::new(config.input_string.to_string())),
+    };
+
+    Ok(BufReader::new(reader))
 }
