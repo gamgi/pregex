@@ -3,7 +3,7 @@ use crate::ast::{AstNode, Kind};
 use crate::nfa::{State, StateParams};
 use itertools::Itertools;
 use pest;
-use statrs::distribution::{Binomial, Discrete, Geometric};
+use statrs::distribution::{Bernoulli, Binomial, Discrete, Geometric};
 use statrs::statistics::Distribution;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -14,6 +14,7 @@ pub enum Dist {
     ExactlyTimes(u64),    // n_match
     PGeometric(u64, f64), // n_min, p
     PBinomial(u64, f64),  // n_max, p
+    PBernoulli(u64, f64), // n_max, p
 }
 
 impl fmt::Display for Dist {
@@ -23,6 +24,7 @@ impl fmt::Display for Dist {
             Dist::ExactlyTimes(n) => write!(f, ""),
             Dist::PGeometric(_, p) => write!(f, "~Geo({})", p),
             Dist::PBinomial(_, p) => write!(f, "~Bin({})", p),
+            Dist::PBernoulli(_, p) => write!(f, "~Ber({})", p),
         }
     }
 }
@@ -43,7 +45,7 @@ impl Dist {
         quantifier_kind: &Kind,
         quantifier_dist_pair: pest::iterators::Pair<'_, crate::parser::Rule>,
     ) -> Self {
-        let n_min = match quantifier_kind {
+        let n = match quantifier_kind {
             Kind::ExactQuantifier(n) => *n,
             _ => 1, // TODO what to do here
         };
@@ -53,11 +55,15 @@ impl Dist {
         match name.as_str() {
             "geo" => {
                 let p: f64 = param.as_str().parse().unwrap();
-                Dist::PGeometric(n_min, p)
+                Dist::PGeometric(n, p)
             }
             "bin" => {
-                let std_dev: f64 = param.as_str().parse().unwrap();
-                Dist::PBinomial(n_min, std_dev)
+                let p: f64 = param.as_str().parse().unwrap();
+                Dist::PBinomial(n, p)
+            }
+            "ber" => {
+                let p: f64 = param.as_str().parse().unwrap();
+                Dist::PBernoulli(n, p)
             }
             _ => {
                 panic!("Unknown distribution {}", name)
@@ -95,6 +101,14 @@ pub fn evaluate(p0: f64, dist: &Option<Dist>, n: u64) -> (f64, f64) {
                 }
                 let x = n;
                 let p = Binomial::new(*p, *n_max).unwrap().pmf(x);
+                ((1.0 - p) * p0, p * p0)
+            }
+            Dist::PBernoulli(n_max, p) => {
+                if n > *n_max {
+                    return (p0, 0.0);
+                }
+                let x = n;
+                let p = Bernoulli::new(*p).unwrap().pmf(x);
                 ((1.0 - p) * p0, p * p0)
             }
         };
@@ -209,5 +223,21 @@ mod test {
             (0.75, 0.25)
         );
         assert_eq!(evaluate(1.0, &Some(Dist::PBinomial(2, 0.5)), 3), (1.0, 0.0));
+    }
+
+    #[test]
+    fn test_distribution_bernoulli() {
+        assert_eq!(
+            evaluate(1.0, &Some(Dist::PBernoulli(1, 0.5)), 0),
+            (0.5, 0.5)
+        );
+        assert_eq!(
+            evaluate(1.0, &Some(Dist::PBernoulli(1, 0.5)), 1),
+            (0.5, 0.5)
+        );
+        assert_eq!(
+            evaluate(1.0, &Some(Dist::PBernoulli(2, 0.5)), 2),
+            (1.0, 0.0)
+        );
     }
 }
