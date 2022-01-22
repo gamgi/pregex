@@ -66,7 +66,7 @@ impl NfaState<'_> {
         let state = &self.nfa[idx];
         self.current_states_params
             .entry(idx)
-            .or_insert((state.params.clone(), 0.0, 0))
+            .or_insert((state.dist.clone(), 0.0, 0))
     }
 
     /// Add state to set of possible states. Returns max(p(terminal)).

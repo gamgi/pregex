@@ -6,32 +6,32 @@ use crate::parser::parse;
 pub struct State {
     pub kind: Kind,
     pub outs: Outs,
-    pub params: Option<Dist>,
+    pub dist: Option<Dist>,
 }
 
 impl State {
-    pub fn new(kind: Kind, outs: Outs, params: Option<Dist>) -> State {
-        State { kind, outs, params }
+    pub fn new(kind: Kind, outs: Outs, dist: Option<Dist>) -> State {
+        State { kind, outs, dist }
     }
     pub fn from(node: AstNode, outs: Outs) -> State {
         State {
             kind: node.kind,
             outs: outs,
-            params: None,
+            dist: None,
         }
     }
     pub fn start(start: Option<usize>) -> State {
         State {
             kind: Kind::Start,
             outs: (start, None),
-            params: None,
+            dist: None,
         }
     }
     pub fn terminal() -> State {
         State {
             kind: Kind::Terminal,
             outs: (None, None),
-            params: None,
+            dist: None,
         }
     }
 }
