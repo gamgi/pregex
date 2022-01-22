@@ -1,6 +1,6 @@
 #![allow(dead_code, unused_variables)]
 use crate::ast::{AstNode, Kind};
-use crate::distribution::{evaluate, Dist};
+use crate::distribution::Dist;
 use crate::nfa::{State, StateParams};
 use crate::utils;
 use itertools::Itertools;
@@ -89,8 +89,14 @@ impl NfaState<'_> {
                 }
                 Kind::Quantifier(_) | Kind::Start | Kind::Split | Kind::ExactQuantifier(_) => {
                     let params = self.get_params_mut(idx);
-                    let (p0, p1) = evaluate(p, &state.dist, params.n);
-                    debug!("    eval p0={} {:?}", p, params);
+                    let (p0, p1) = match &state.dist {
+                        Some(dist) => dist.evaluate(p, params.n, false),
+                        None => (p, p),
+                    };
+                    debug!(
+                        "    eval p0={} dist={:?} params={:?}",
+                        p, state.dist, params
+                    );
                     return f64::max(
                         self.add_state(state.outs.0, force, p0),
                         self.add_state(state.outs.1, force, p1),
@@ -432,7 +438,8 @@ mod test {
         assert_eq!(state.step('a'), 0.5);
         assert_eq!(
             utils::probs(&state.current_states_params),
-            vec![0.125, 0.0, 0.375]
+            // NOTE wouold be more logical the other way around
+            vec![0.375, 0.0, 0.125]
         );
     }
 }

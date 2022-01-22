@@ -19,7 +19,7 @@ ExactQuantifier =  { QuantifierParam }
 
 QuantifierParam =  { ASCII_DIGIT* }
 QuantifierDist  =  { "~" ~ DistName ~ "(" ~ DistParam ~ ")" }
-DistName        =  { ^"Geo" }
+DistName        =  { ^"Geo" | ^"Bin" | ^"Ber" }
 DistParam       =  { ASCII_FLOAT }
 
 ASCII_FLOAT     = _{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
