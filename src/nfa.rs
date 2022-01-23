@@ -765,9 +765,9 @@ mod test {
     }
 
     #[test]
-    fn test_asts_to_nfa_with_anchor_start() {
+    fn test_asts_to_nfa_with_start_anchor() {
         let first = AstNode {
-            length: 1,
+            length: 0,
             kind: Kind::AnchorStart,
         };
         let second = AstNode {

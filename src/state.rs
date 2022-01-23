@@ -336,6 +336,62 @@ mod test {
             vec![&2]
         );
 
+        assert_eq!(state.step('c'), 1.0);
+        assert_eq!(
+            state.current_states.iter().collect::<Vec<&usize>>(),
+            vec![&3]
+        );
+
+        assert_eq!(state.step('d'), 1.0);
+        assert_eq!(
+            state.current_states.iter().collect::<Vec<&usize>>(),
+            Vec::<&usize>::new()
+        );
+        assert_eq!(state.visited.len(), 0);
+    }
+
+    #[test]
+    fn test_state_not_match() {
+        let nfa = vec![
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(1), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('c'),
+                },
+                (Some(3), None),
+            ),
+            State::terminal(),
+        ];
+        let mut state = NfaState::new(&nfa);
+        state.init_state(Some(0), true);
+        assert_eq!(state.current_states.len(), 1);
+
+        assert_eq!(state.step('a'), 0.0);
+        assert_eq!(
+            state.current_states.iter().collect::<Vec<&usize>>(),
+            vec![&1]
+        );
+
+        assert_eq!(state.step('b'), 0.0);
+        assert_eq!(
+            state.current_states.iter().collect::<Vec<&usize>>(),
+            vec![&2]
+        );
+
         assert_eq!(state.step('x'), 0.0);
         assert_eq!(
             state.current_states.iter().collect::<Vec<&usize>>(),
@@ -362,13 +418,7 @@ mod test {
                 },
                 (Some(2), None),
             ),
-            State::from(
-                AstNode {
-                    length: 1,
-                    kind: Kind::Terminal,
-                },
-                (None, None),
-            ),
+            State::terminal()
         ];
         let mut state = NfaState::new(&nfa);
         state.init_state(Some(0), true);
