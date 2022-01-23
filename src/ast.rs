@@ -8,20 +8,23 @@ use std::fmt;
 pub struct AstNode {
     pub length: usize,
     pub kind: Kind,
+    // Keep distirbution out of here
 }
+// TODO create a helper ::new function to cut boilerplate
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Kind {
+    AnchorEnd,
+    AnchorStart,
+    Alternation(Box<AstNode>, Box<AstNode>),
+    Concatenation(Box<AstNode>, Box<AstNode>),
+    ExactQuantifier(u64),
     Literal(char),
+    Split,
+    Start,
+    Terminal,
     Quantified(Box<AstNode>, Box<AstNode>, Option<Dist>),
     Quantifier(char),
-    ExactQuantifier(u64),
-    Concatenation(Box<AstNode>, Box<AstNode>),
-    Alternation(Box<AstNode>, Box<AstNode>),
-    Split,
-    Terminal,
-    Start,
-    AnchorStart,
 }
 
 impl fmt::Display for Kind {
@@ -39,9 +42,10 @@ impl fmt::Display for Kind {
             Kind::ExactQuantifier(n) => write!(f, "{}", n),
             Kind::Alternation(l, r) => write!(f, "{}|{}", l, r),
             Kind::Split => write!(f, "|"),
-            Kind::Terminal => write!(f, "$"),
+            Kind::Terminal => write!(f, ""),
             Kind::Start => write!(f, ""),
             Kind::AnchorStart => write!(f, "^"),
+            Kind::AnchorEnd => write!(f, "$"),
             // See also fmt::Display for Dist
         }
     }
@@ -68,6 +72,12 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
                 };
             }
             left_ast
+        }
+        Rule::AnchorEnd => {
+            return AstNode {
+                length: 0,
+                kind: Kind::AnchorEnd,
+            };
         }
         Rule::AnchorStart => {
             return AstNode {
