@@ -109,7 +109,7 @@ impl Dist {
             }
             Dist::PBinomial(n_max, p) => {
                 if n > *n_max {
-                    return (p0, 0.0);
+                    return (0.0, 0.0);
                 }
                 let x = n;
                 match log {
@@ -196,17 +196,21 @@ mod test {
     }
     #[test]
     fn test_distribution_binomial_degenerate() {
-        // If p = 1 the distribution is concentrated at n
+        // p = 1, the distribution is concentrated at 0
         assert_eq!(Dist::PBinomial(0, 1.0).evaluate(1.0, 0, false), (0.0, 1.0));
-        assert_eq!(Dist::PBinomial(0, 1.0).evaluate(1.0, 1, false), (1.0, 0.0));
+        assert_eq!(Dist::PBinomial(0, 1.0).evaluate(1.0, 1, false), (0.0, 0.0));
+        assert_eq!(Dist::PBinomial(0, 1.0).evaluate(1.0, 2, false), (0.0, 0.0));
+
+        // p = 1, the distribution is concentrated at 1
         assert_eq!(Dist::PBinomial(1, 1.0).evaluate(1.0, 1, false), (0.0, 1.0));
+        assert_eq!(Dist::PBinomial(1, 1.0).evaluate(1.0, 2, false), (0.0, 0.0));
     }
 
     #[test]
     fn test_distribution_binomial_up_to_1() {
         assert_eq!(Dist::PBinomial(1, 0.5).evaluate(1.0, 0, false), (0.5, 0.5));
         assert_eq!(Dist::PBinomial(1, 0.5).evaluate(1.0, 1, false), (0.5, 0.5));
-        assert_eq!(Dist::PBinomial(1, 0.5).evaluate(1.0, 2, false), (1.0, 0.0));
+        assert_eq!(Dist::PBinomial(1, 0.5).evaluate(1.0, 2, false), (0.0, 0.0));
     }
 
     #[test]
@@ -220,7 +224,7 @@ mod test {
             Dist::PBinomial(2, 0.5).evaluate(1.0, 2, false),
             (0.75, 0.25)
         );
-        assert_eq!(Dist::PBinomial(2, 0.5).evaluate(1.0, 3, false), (1.0, 0.0));
+        assert_eq!(Dist::PBinomial(2, 0.5).evaluate(1.0, 3, false), (0.0, 0.0));
     }
 
     #[test]
