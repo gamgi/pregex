@@ -39,6 +39,14 @@ impl State {
             dist: None,
         }
     }
+    #[allow(dead_code)]
+    pub fn anchor_start(start: Option<usize>) -> State {
+        State {
+            kind: Kind::AnchorStart,
+            outs: (start, None),
+            dist: None,
+        }
+    }
     pub fn terminal() -> State {
         State {
             kind: Kind::Terminal,
@@ -62,6 +70,7 @@ struct Frag {
 /// The compilation first parses the AST(s) into fragments which
 /// represent partial NFA states following Thompson [1968].
 /// The fragments are then joined to form the final NFA.
+/// The NFA is initialized with a Start state.
 pub fn asts_to_nfa(asts: Vec<AstNode>) -> Vec<State> {
     // concatenate asts to single state list (HACK)
     let mut states = Vec::new();
@@ -69,15 +78,25 @@ pub fn asts_to_nfa(asts: Vec<AstNode>) -> Vec<State> {
     let mut start: Option<usize> = None;
 
     for ast in asts {
+        // Use index as offset for new NFA fragment
         let end = index + ast.length;
         let nfa_frag = ast_to_frag(ast, index, (Some(end), None), None);
         index = nfa_frag.states.len();
-        if let None = start {
+        if start.is_none() {
             start = Some(nfa_frag.start);
         }
         states.extend(nfa_frag.states);
     }
-    let start_state = vec![State::start(start)];
+
+    // Add start state if NFA does not start with one
+    let start_state = match states
+        .get(0)
+        .map(|state| [Kind::Start, Kind::AnchorStart].contains(&state.kind))
+        .unwrap_or(false)
+    {
+        true => vec![],
+        false => vec![State::start(start)],
+    };
     [start_state, states].concat()
 }
 
@@ -108,6 +127,11 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist
                 outs: outs,
             }
         }
+        Kind::AnchorStart => Frag {
+            states: vec![State::new(Kind::AnchorStart, outs, None)],
+            start: index,
+            outs,
+        },
         Kind::Concatenation(left, right) => {
             // left points to start of right and right points to outs
             // left as start
@@ -682,7 +706,7 @@ mod test {
     }
 
     #[test]
-    fn test_nfas_to_ast() {
+    fn test_asts_to_nfa() {
         let first = AstNode {
             length: 3,
             kind: Kind::Concatenation(
@@ -741,7 +765,48 @@ mod test {
     }
 
     #[test]
-    fn test_nfas_to_ast2() {
+    fn test_asts_to_nfa_with_anchor_start() {
+        let first = AstNode {
+            length: 1,
+            kind: Kind::AnchorStart,
+        };
+        let second = AstNode {
+            length: 2,
+            kind: Kind::Concatenation(
+                Box::new(AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                }),
+                Box::new(AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                }),
+            ),
+        };
+        let expected = vec![
+            State::anchor_start(Some(1)),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(3), None),
+            ),
+        ];
+
+        let result = asts_to_nfa(vec![first, second]);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_nfas_to_ast_start_node_special_case_1() {
         let asts = parse("ab?c").unwrap();
         let result = asts_to_nfa(asts);
         let expected = vec![
@@ -780,7 +845,7 @@ mod test {
     }
 
     #[test]
-    fn test_nfas_to_ast3() {
+    fn test_nfas_to_ast_start_node_special_case_2() {
         let asts = parse("a?b").unwrap();
         let result = asts_to_nfa(asts);
         let expected = vec![
@@ -812,7 +877,7 @@ mod test {
     }
 
     #[test]
-    fn test_nfas_to_ast4() {
+    fn test_nfas_to_ast_start_node_special_case_3() {
         let asts = parse("a{2}b").unwrap();
         let result = asts_to_nfa(asts);
         let expected = vec![
@@ -835,6 +900,37 @@ mod test {
                     kind: Kind::Literal('b'),
                 },
                 (Some(4), None),
+            ),
+            State::terminal(),
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_nfas_to_ast_with_start_anchor() {
+        let asts = parse("^ab").unwrap();
+        let result = asts_to_nfa(asts);
+        let expected = vec![
+            State::from(
+                AstNode {
+                    length: 0,
+                    kind: Kind::AnchorStart,
+                },
+                (Some(1), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(3), None),
             ),
             State::terminal(),
         ];

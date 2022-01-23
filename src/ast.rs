@@ -21,6 +21,7 @@ pub enum Kind {
     Split,
     Terminal,
     Start,
+    AnchorStart,
 }
 
 impl fmt::Display for Kind {
@@ -39,7 +40,8 @@ impl fmt::Display for Kind {
             Kind::Alternation(l, r) => write!(f, "{}|{}", l, r),
             Kind::Split => write!(f, "|"),
             Kind::Terminal => write!(f, "$"),
-            Kind::Start => write!(f, "^"),
+            Kind::Start => write!(f, ""),
+            Kind::AnchorStart => write!(f, "^"),
             // See also fmt::Display for Dist
         }
     }
@@ -66,6 +68,12 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
                 };
             }
             left_ast
+        }
+        Rule::AnchorStart => {
+            return AstNode {
+                length: 1,
+                kind: Kind::AnchorStart,
+            };
         }
         Rule::Concat | Rule::Concats => {
             let mut pair = pair.into_inner();

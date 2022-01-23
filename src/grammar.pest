@@ -1,5 +1,6 @@
 
-Regex 			= _{ SOI ~ ( Alternation | Expression ) ~ EOI }
+Regex           = _{ SOI ~ AnchorStart? ~ ( Alternation | Expression ) ~ EOI }
+AnchorStart     =  { "^" }
 Alternation     =  { Expression ~ ( "|" ~ ( Alternation | Expression ) ) }
 Expression      = _{ Concats | Concat | Factor }
 

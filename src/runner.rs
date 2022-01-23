@@ -34,19 +34,20 @@ mod test {
     #[test]
     fn test_matches_simple_literal() {
         let nfa = vec![
+            State::anchor_start(Some(1)),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('a'),
                 },
-                (Some(1), None),
+                (Some(2), None),
             ),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('b'),
                 },
-                (Some(2), None),
+                (Some(3), None),
             ),
             State::terminal(),
         ];
@@ -57,15 +58,33 @@ mod test {
     }
 
     #[test]
-    fn test_matches_simple_alternation() {
+    fn test_matches_simple_literal_without_start_anchor() {
         let nfa = vec![
+            State::start(Some(1)),
             State::from(
                 AstNode {
                     length: 1,
-                    kind: Kind::Start,
+                    kind: Kind::Literal('a'),
                 },
-                (Some(1), None),
+                (Some(2), None),
             ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(3), None),
+            ),
+            State::terminal(),
+        ];
+        assert_eq!(matches(&nfa, "bb"), false);
+        assert_eq!(matches(&nfa, "xab"), true);
+    }
+
+    #[test]
+    fn test_matches_simple_alternation() {
+        let nfa = vec![
+            State::anchor_start(Some(1)),
             State::from(
                 AstNode {
                     length: 1,
@@ -99,13 +118,7 @@ mod test {
     #[test]
     fn test_matches_conditional_first() {
         let nfa = vec![
-            State::from(
-                AstNode {
-                    length: 1,
-                    kind: Kind::Start,
-                },
-                (Some(2), None),
-            ),
+            State::anchor_start(Some(2)),
             State::from(
                 AstNode {
                     length: 1,
@@ -140,13 +153,7 @@ mod test {
     #[test]
     fn test_matches_simple_conditional() {
         let nfa = vec![
-            State::from(
-                AstNode {
-                    length: 1,
-                    kind: Kind::Start,
-                },
-                (Some(1), None),
-            ),
+            State::anchor_start(Some(1)),
             State::from(
                 AstNode {
                     length: 1,
@@ -273,7 +280,7 @@ mod test {
     #[test]
     fn test_matches_exact_quantifier() {
         let nfa = vec![
-            State::start(Some(1)),
+            State::anchor_start(Some(1)),
             State::from(
                 AstNode {
                     length: 1,

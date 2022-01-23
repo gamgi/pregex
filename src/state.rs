@@ -80,7 +80,18 @@ impl NfaState<'_> {
                     self.update_state(idx, p, false);
                     return p;
                 }
-                Kind::Quantifier(_) | Kind::Start | Kind::Split | Kind::ExactQuantifier(_) => {
+                Kind::Start => {
+                    // Add start back to current_states
+                    self.update_state(idx, p, false);
+                    return f64::max(
+                        self.add_state(state.outs.0, force, p),
+                        self.add_state(state.outs.1, force, p),
+                    );
+                }
+                Kind::Quantifier(_)
+                | Kind::AnchorStart
+                | Kind::Split
+                | Kind::ExactQuantifier(_) => {
                     let params = self.get_params_mut(idx);
                     let (p0, p1) = match &state.dist {
                         Some(dist) => dist.evaluate(p, params.n, false),
@@ -117,6 +128,7 @@ impl NfaState<'_> {
         );
     }
 
+    /// Step the regex engine by feeding a token to it.
     pub fn step(&mut self, token: char) -> f64 {
         debug!("step {}", token);
         let mut new_states: HashMap<usize, f64> = HashMap::new();
@@ -129,7 +141,7 @@ impl NfaState<'_> {
             }
             None => {}
         };
-
+        // Check if token matches any of our states.
         for i in self.current_states.iter() {
             let (p, state) = self.get_state(*i);
             match state.kind {
@@ -140,9 +152,13 @@ impl NfaState<'_> {
                 Kind::Literal(match_token) => {
                     if match_token == token {
                         debug!("  match {}", token);
+                        // Match, follow arrows of state.
                         add_new_state(state.outs.0, p);
                         add_new_state(state.outs.1, p);
                     }
+                }
+                Kind::Start => {
+                    add_new_state(Some(*i), p);
                 }
                 _ => {}
             }
@@ -279,7 +295,7 @@ mod test {
     // }
 
     #[test]
-    fn test_state_step() {
+    fn test_state_step_match() {
         let nfa = vec![
             State::from(
                 AstNode {
@@ -300,8 +316,9 @@ mod test {
                     length: 1,
                     kind: Kind::Literal('c'),
                 },
-                (None, None),
+                (Some(3), None),
             ),
+            State::terminal(),
         ];
         let mut state = NfaState::new(&nfa);
         state.init_state(Some(0), true);
