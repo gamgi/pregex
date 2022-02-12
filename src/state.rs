@@ -88,8 +88,13 @@ impl NfaState<'_> {
                         self.add_state(state.outs.1, force, p),
                     );
                 }
+                Kind::AnchorStart => {
+                    return f64::max(
+                        self.add_state(state.outs.0, force, p),
+                        self.add_state(state.outs.1, force, p),
+                    );
+                }
                 Kind::Quantifier(_)
-                | Kind::AnchorStart
                 | Kind::Split
                 | Kind::ExactQuantifier(_) => {
                     let params = self.get_params_mut(idx);
@@ -157,7 +162,7 @@ impl NfaState<'_> {
                         add_new_state(state.outs.1, p);
                     }
                 }
-                Kind::Start => {
+                Kind::Start | Kind::AnchorStart => {
                     add_new_state(Some(*i), p);
                 }
                 _ => {}

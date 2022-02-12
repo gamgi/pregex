@@ -81,7 +81,7 @@ pub fn asts_to_nfa(asts: Vec<AstNode>) -> Vec<State> {
         // Use index as offset for new NFA fragment
         let end = index + ast.length;
         let nfa_frag = ast_to_frag(ast, index, (Some(end), None), None);
-        index = nfa_frag.states.len();
+        index = end;
         if start.is_none() {
             start = Some(nfa_frag.start);
         }
@@ -127,6 +127,11 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist
                 outs: outs,
             }
         }
+        Kind::AnchorEnd=> Frag {
+            states: vec![State::new(Kind::AnchorEnd, outs, None)],
+            start: index,
+            outs,
+        },
         Kind::AnchorStart => Frag {
             states: vec![State::new(Kind::AnchorStart, outs, None)],
             start: index,
@@ -159,6 +164,13 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist
             states: vec![State::new(ast.kind, outs, distribution)],
             start: index,
             outs: outs,
+        },
+        Kind::Start => Frag {
+            // start points to outs.
+            // start as start
+            states: vec![State::new(Kind::Start, outs, None)],
+            start: index,
+            outs
         },
         Kind::Terminal => Frag {
             // terminal points to none
@@ -731,7 +743,7 @@ mod test {
             ),
         };
         let second = AstNode {
-            length: 1,
+            length: 0,
             kind: Kind::Terminal,
         };
         let expected = vec![
@@ -765,7 +777,7 @@ mod test {
     }
 
     #[test]
-    fn test_asts_to_nfa_with_start_anchor() {
+    fn test_asts_to_nfa_with_anchor_start() {
         let first = AstNode {
             length: 0,
             kind: Kind::AnchorStart,
@@ -806,7 +818,7 @@ mod test {
     }
 
     #[test]
-    fn test_nfas_to_ast_start_node_special_case_1() {
+    fn test_asts_to_nfa_start_node_special_case_1() {
         let asts = parse("ab?c").unwrap();
         let result = asts_to_nfa(asts);
         let expected = vec![
@@ -845,7 +857,7 @@ mod test {
     }
 
     #[test]
-    fn test_nfas_to_ast_start_node_special_case_2() {
+    fn test_asts_to_nfa_start_node_special_case_2() {
         let asts = parse("a?b").unwrap();
         let result = asts_to_nfa(asts);
         let expected = vec![
@@ -907,13 +919,13 @@ mod test {
     }
 
     #[test]
-    fn test_nfas_to_ast_with_start_anchor() {
+    fn test_asts_to_nfa_with_anchor_start_2() {
         let asts = parse("^ab").unwrap();
         let result = asts_to_nfa(asts);
         let expected = vec![
             State::from(
                 AstNode {
-                    length: 0,
+                    length: 1,
                     kind: Kind::AnchorStart,
                 },
                 (Some(1), None),

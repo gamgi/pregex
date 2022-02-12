@@ -78,6 +78,7 @@ mod test {
             State::terminal(),
         ];
         assert_eq!(matches(&nfa, "bb"), false);
+        assert_eq!(matches(&nfa, "ab"), true);
         assert_eq!(matches(&nfa, "xab"), true);
     }
 
