@@ -124,6 +124,32 @@ mod test {
     }
 
     #[test]
+    fn test_matches_simple_dot() {
+        let nfa = vec![
+            State::anchor_start(Some(1)),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Dot,
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(3), None),
+            ),
+            State::terminal(),
+        ];
+        assert_eq!(matches(&nfa, "ab"), true);
+        assert_eq!(matches(&nfa, "xb"), true);
+        assert_eq!(matches(&nfa, "abx"), true);
+        assert_eq!(matches(&nfa, "xab"), false);
+    }
+
+    #[test]
     fn test_matches_conditional_first() {
         let nfa = vec![
             State::anchor_start(Some(2)),

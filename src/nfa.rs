@@ -156,7 +156,7 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist
                 outs: right.outs,
             }
         }
-        Kind::Literal(_) => Frag {
+        Kind::Literal(_) | Kind::Dot => Frag {
             // literal points to outs
             // literal as start
             states: vec![State::from(ast, outs)],

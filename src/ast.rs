@@ -18,6 +18,7 @@ pub enum Kind {
     Concatenation(Box<AstNode>, Box<AstNode>),
     ExactQuantifier(u64),
     Literal(char),
+    Dot,
     Split,
     Start,
     Terminal,
@@ -29,6 +30,7 @@ impl fmt::Display for Kind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
             Kind::Literal(c) => write!(f, "{}", c),
+            Kind::Dot => write!(f, "."),
             Kind::Concatenation(l, r) => write!(f, "{}{}.", l, r),
             Kind::Quantified(r, l, Some(q)) => write!(f, "{}{{{}{}}}", l, r, q),
             Kind::Quantified(r, l, None) => match r.kind {
@@ -119,6 +121,10 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
                 kind: Kind::Literal(c),
             }
         }
+        Rule::Dot => AstNode {
+            length: 1,
+            kind: Kind::Dot,
+        },
         Rule::EOI => AstNode {
             length: 0,
             kind: Kind::Terminal,
