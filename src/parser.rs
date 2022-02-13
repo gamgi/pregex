@@ -210,6 +210,26 @@ mod test {
     }
 
     #[test]
+    fn test_parser_anchor_end_ast() {
+        let result = parse("a$").unwrap_or(vec![]);
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Literal('a'),
+            },
+            AstNode {
+                length: 1,
+                kind: Kind::AnchorEnd,
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
     fn test_parser_concat_length() {
         let result = parse("ab").unwrap_or(vec![]).first().unwrap().to_owned();
         assert_eq!(result.length, 2);

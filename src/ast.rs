@@ -75,7 +75,7 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
         }
         Rule::AnchorEnd => {
             return AstNode {
-                length: 0,
+                length: 1,
                 kind: Kind::AnchorEnd,
             };
         }

@@ -14,8 +14,15 @@ pub fn match_p(nfa: &Vec<State>, string: &str) -> Option<f64> {
     let mut state = NfaState::new(nfa);
     state.init_state(Some(0), true);
 
-    // step through string
-    let p = utils::find_max(string.chars().map(|c| state.step(c)));
+    let tokens = [
+        vec![Kind::Start],
+        string.chars().map(Kind::Literal).collect::<Vec<_>>(),
+        vec![Kind::Terminal],
+    ]
+    .concat();
+
+    // step through vector of tokens
+    let p = utils::find_max(tokens.into_iter().map(|t| state.step(t)));
     Some(p)
 }
 
@@ -187,9 +194,10 @@ mod test {
         ];
         assert_eq!(matches(&nfa, "a"), false);
         assert_eq!(matches(&nfa, "ab"), false);
+        assert_eq!(matches(&nfa, "axc"), false);
+        assert_eq!(matches(&nfa, "abc"), true);
         assert_eq!(matches(&nfa, "abbc"), false);
         assert_eq!(matches(&nfa, "ac"), true);
-        assert_eq!(matches(&nfa, "abc"), true);
         assert_eq!(matches(&nfa, "abcx"), true);
         assert_eq!(matches(&nfa, "xabc"), false);
     }
@@ -197,85 +205,89 @@ mod test {
     #[test]
     fn test_matches_simple_plus() {
         let nfa = vec![
+            State::start(Some(1)),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('a'),
                 },
-                (Some(1), None),
+                (Some(2), None),
             ),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('b'),
                 },
-                (Some(2), None),
+                (Some(3), None),
             ),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Quantifier('+'),
                 },
-                (Some(1), Some(3)),
+                (Some(2), Some(4)),
             ),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('c'),
                 },
-                (Some(4), None),
+                (Some(5), None),
             ),
             State::terminal(),
         ];
         assert_eq!(matches(&nfa, "a"), false);
         assert_eq!(matches(&nfa, "ab"), false);
+        assert_eq!(matches(&nfa, "axc"), false);
+        assert_eq!(matches(&nfa, "abc"), true);
         assert_eq!(matches(&nfa, "abbc"), true);
         assert_eq!(matches(&nfa, "ac"), false);
-        assert_eq!(matches(&nfa, "abc"), true);
         assert_eq!(matches(&nfa, "abcx"), true);
-        assert_eq!(matches(&nfa, "xabc"), false);
+        assert_eq!(matches(&nfa, "xabc"), true);
     }
 
     #[test]
     fn test_matches_simple_star() {
         let nfa = vec![
+            State::start(Some(1)),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('a'),
                 },
-                (Some(2), None),
+                (Some(3), None),
             ),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('b'),
                 },
-                (Some(2), None),
+                (Some(3), None),
             ),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Quantifier('*'),
                 },
-                (Some(1), Some(3)),
+                (Some(2), Some(4)),
             ),
             State::from(
                 AstNode {
                     length: 1,
                     kind: Kind::Literal('c'),
                 },
-                (Some(4), None),
+                (Some(5), None),
             ),
             State::terminal(),
         ];
         assert_eq!(matches(&nfa, "a"), false);
         assert_eq!(matches(&nfa, "ab"), false);
+        assert_eq!(matches(&nfa, "abc"), true);
+        assert_eq!(matches(&nfa, "axc"), false);
         assert_eq!(matches(&nfa, "abbc"), true);
         assert_eq!(matches(&nfa, "ac"), true);
-        assert_eq!(matches(&nfa, "abc"), true);
         assert_eq!(matches(&nfa, "abcx"), true);
-        assert_eq!(matches(&nfa, "xabc"), false);
+        assert_eq!(matches(&nfa, "xabc"), true);
     }
 
     #[test]

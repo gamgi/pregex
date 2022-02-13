@@ -47,6 +47,14 @@ impl State {
             dist: None,
         }
     }
+    #[allow(dead_code)]
+    pub fn anchor_end(end: Option<usize>) -> State {
+        State {
+            kind: Kind::AnchorEnd,
+            outs: (end, None),
+            dist: None,
+        }
+    }
     pub fn terminal() -> State {
         State {
             kind: Kind::Terminal,
@@ -127,7 +135,7 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist
                 outs: outs,
             }
         }
-        Kind::AnchorEnd=> Frag {
+        Kind::AnchorEnd => Frag {
             states: vec![State::new(Kind::AnchorEnd, outs, None)],
             start: index,
             outs,
@@ -170,7 +178,7 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist
             // start as start
             states: vec![State::new(Kind::Start, outs, None)],
             start: index,
-            outs
+            outs,
         },
         Kind::Terminal => Frag {
             // terminal points to none
@@ -811,6 +819,48 @@ mod test {
                 },
                 (Some(3), None),
             ),
+        ];
+
+        let result = asts_to_nfa(vec![first, second]);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_asts_to_nfa_with_anchor_end() {
+        let first = AstNode {
+            length: 2,
+            kind: Kind::Concatenation(
+                Box::new(AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                }),
+                Box::new(AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                }),
+            ),
+        };
+        let second = AstNode {
+            length: 1,
+            kind: Kind::AnchorEnd,
+        };
+        let expected = vec![
+            State::start(Some(1)),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(3), None),
+            ),
+            State::anchor_end(Some(4)),
         ];
 
         let result = asts_to_nfa(vec![first, second]);
