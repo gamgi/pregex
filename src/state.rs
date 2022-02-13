@@ -162,14 +162,25 @@ impl NfaState<'_> {
                         add_new_state(state.outs.0, p);
                     }
                 }
-                match_token => {
-                    if *match_token == token {
-                        debug!("  match {}", token);
+                Kind::Dot => {
+                    if let Kind::Literal(_) = token {
+                        debug!("  match any");
                         // Match, follow arrows of state.
                         add_new_state(state.outs.0, p);
                         add_new_state(state.outs.1, p);
                     }
                 }
+                Kind::Literal(match_c) => {
+                    if let Kind::Literal(c) = token {
+                        if c == *match_c {
+                            debug!("  match {}", token);
+                            // Match, follow arrows of state.
+                            add_new_state(state.outs.0, p);
+                            add_new_state(state.outs.1, p);
+                        }
+                    }
+                }
+                _ => {}
             }
         }
 

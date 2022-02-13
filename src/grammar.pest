@@ -10,9 +10,10 @@ Concat          =  { Factor ~ Factor }
 Group           = _{ "(" ~ ( Alternation | Expression ) ~ ")" }
 
 Factor          = _{ Quantified | Group | Token }
-Token           = _{ Literal }
+Token           = _{ Literal | Dot }
 Quantified      =  { ( Token | Group ) ~ Quantifier }
 Literal         =  { ASCII_ALPHANUMERIC | " " }
+Dot             =  { "." }
 
 Quantifier      = _{ ShortQuantifier | LongQuantifier }
 ShortQuantifier =  { "+" | "?" | "*" }
