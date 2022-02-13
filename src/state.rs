@@ -80,7 +80,15 @@ impl NfaState<'_> {
                     self.update_state(idx, p, false);
                     return p;
                 }
-                Kind::Quantifier(_) | Kind::Start | Kind::Split | Kind::ExactQuantifier(_) => {
+                Kind::Start => {
+                    // Add start back to current_states
+                    self.update_state(idx, p, false);
+                    return f64::max(
+                        self.add_state(state.outs.0, force, p),
+                        self.add_state(state.outs.1, force, p),
+                    );
+                }
+                Kind::Quantifier(_) | Kind::Split | Kind::ExactQuantifier(_) => {
                     let params = self.get_params_mut(idx);
                     let (p0, p1) = match &state.dist {
                         Some(dist) => dist.evaluate(p, params.n, false),
@@ -117,7 +125,11 @@ impl NfaState<'_> {
         );
     }
 
-    pub fn step(&mut self, token: char) -> f64 {
+    pub fn step_char(&mut self, c: char) -> f64 {
+        self.step(Kind::Literal(c))
+    }
+    /// Step the regex engine by feeding a token to it.
+    pub fn step(&mut self, token: Kind) -> f64 {
         debug!("step {}", token);
         let mut new_states: HashMap<usize, f64> = HashMap::new();
         let mut result = 0.0;
@@ -129,22 +141,35 @@ impl NfaState<'_> {
             }
             None => {}
         };
-
+        // Check if token matches any of our states.
         for i in self.current_states.iter() {
             let (p, state) = self.get_state(*i);
-            match state.kind {
+            match &state.kind {
                 Kind::Terminal => {
                     debug!("  terminal");
                     result = f64::max(p, result);
                 }
-                Kind::Literal(match_token) => {
-                    if match_token == token {
+                Kind::Start => {
+                    add_new_state(Some(*i), p);
+                }
+                Kind::AnchorStart => {
+                    if token == Kind::Start {
+                        add_new_state(state.outs.0, p);
+                    }
+                }
+                Kind::AnchorEnd => {
+                    if token == Kind::Terminal {
+                        add_new_state(state.outs.0, p);
+                    }
+                }
+                match_token => {
+                    if *match_token == token {
                         debug!("  match {}", token);
+                        // Match, follow arrows of state.
                         add_new_state(state.outs.0, p);
                         add_new_state(state.outs.1, p);
                     }
                 }
-                _ => {}
             }
         }
 
@@ -279,7 +304,7 @@ mod test {
     // }
 
     #[test]
-    fn test_state_step() {
+    fn test_state_step_match() {
         let nfa = vec![
             State::from(
                 AstNode {
@@ -300,26 +325,84 @@ mod test {
                     length: 1,
                     kind: Kind::Literal('c'),
                 },
-                (None, None),
+                (Some(3), None),
             ),
+            State::terminal(),
         ];
         let mut state = NfaState::new(&nfa);
         state.init_state(Some(0), true);
         assert_eq!(state.current_states.len(), 1);
 
-        assert_eq!(state.step('a'), 0.0);
+        assert_eq!(state.step_char('a'), 0.0);
         assert_eq!(
             state.current_states.iter().collect::<Vec<&usize>>(),
             vec![&1]
         );
 
-        assert_eq!(state.step('b'), 0.0);
+        assert_eq!(state.step_char('b'), 0.0);
         assert_eq!(
             state.current_states.iter().collect::<Vec<&usize>>(),
             vec![&2]
         );
 
-        assert_eq!(state.step('x'), 0.0);
+        assert_eq!(state.step_char('c'), 1.0);
+        assert_eq!(
+            state.current_states.iter().collect::<Vec<&usize>>(),
+            // Vec::<&usize>::new()
+            vec![&3]
+        );
+
+        assert_eq!(state.step_char('d'), 1.0);
+        assert_eq!(
+            state.current_states.iter().collect::<Vec<&usize>>(),
+            Vec::<&usize>::new() // vec![]
+        );
+        assert_eq!(state.visited.len(), 0);
+    }
+
+    #[test]
+    fn test_state_not_match() {
+        let nfa = vec![
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('a'),
+                },
+                (Some(1), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('b'),
+                },
+                (Some(2), None),
+            ),
+            State::from(
+                AstNode {
+                    length: 1,
+                    kind: Kind::Literal('c'),
+                },
+                (Some(3), None),
+            ),
+            State::terminal(),
+        ];
+        let mut state = NfaState::new(&nfa);
+        state.init_state(Some(0), true);
+        assert_eq!(state.current_states.len(), 1);
+
+        assert_eq!(state.step_char('a'), 0.0);
+        assert_eq!(
+            state.current_states.iter().collect::<Vec<&usize>>(),
+            vec![&1]
+        );
+
+        assert_eq!(state.step_char('b'), 0.0);
+        assert_eq!(
+            state.current_states.iter().collect::<Vec<&usize>>(),
+            vec![&2]
+        );
+
+        assert_eq!(state.step_char('x'), 0.0);
         assert_eq!(
             state.current_states.iter().collect::<Vec<&usize>>(),
             Vec::<&usize>::new()
@@ -345,13 +428,7 @@ mod test {
                 },
                 (Some(2), None),
             ),
-            State::from(
-                AstNode {
-                    length: 1,
-                    kind: Kind::Terminal,
-                },
-                (None, None),
-            ),
+            State::terminal(),
         ];
         let mut state = NfaState::new(&nfa);
         state.init_state(Some(0), true);
@@ -360,7 +437,7 @@ mod test {
             state.current_states.iter().collect::<Vec<&usize>>(),
             vec![&1]
         );
-        assert_eq!(state.step('a'), 1.0);
+        assert_eq!(state.step_char('a'), 1.0);
         assert_eq!(state.visited.len(), 0);
     }
 
@@ -381,15 +458,16 @@ mod test {
             ),
             State::terminal(),
         ];
+        println!("{:?}", nfa);
         let mut state = NfaState::new(&nfa);
         state.init_state(Some(0), true);
-        assert_eq!(state.step('a'), 0.0);
+        assert_eq!(state.step_char('a'), 0.0);
         assert_eq!(
             utils::probs(&state.current_states_params),
             vec![1.0, 0.0, 0.0]
         );
 
-        assert_eq!(state.step('a'), 1.0);
+        assert_eq!(state.step_char('a'), 1.0);
         assert_eq!(
             utils::probs(&state.current_states_params),
             vec![0.0, 0.0, 1.0]

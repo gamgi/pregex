@@ -45,7 +45,7 @@ fn main() -> Result<()> {
                 exit(1);
             }
             Ok(input_string) => match runner::match_p(&nfa, &input_string) {
-                Some(p) => println!("{}\t{}", p, input_string),
+                Some(p) => println!("{:.5}\t{}", p, input_string),
                 None => {}
             },
         }
