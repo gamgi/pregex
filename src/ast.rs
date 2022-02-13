@@ -8,9 +8,7 @@ use std::fmt;
 pub struct AstNode {
     pub length: usize,
     pub kind: Kind,
-    // Keep distirbution out of here
 }
-// TODO create a helper ::new function to cut boilerplate
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Kind {

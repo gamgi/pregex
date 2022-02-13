@@ -215,16 +215,11 @@ mod test {
 
     #[test]
     fn test_distribution_binomial_up_to_2() {
-        assert_eq!(
-            Dist::PBinomial(2, 0.5).evaluate(1.0, 0, false),
-            (0.75, 0.25)
-        );
-        assert_eq!(Dist::PBinomial(2, 0.5).evaluate(1.0, 1, false), (0.5, 0.5));
-        assert_eq!(
-            Dist::PBinomial(2, 0.5).evaluate(1.0, 2, false),
-            (0.75, 0.25)
-        );
-        assert_eq!(Dist::PBinomial(2, 0.5).evaluate(1.0, 3, false), (0.0, 0.0));
+        use Dist::PBinomial;
+        assert_eq!(PBinomial(2, 0.5).evaluate(1.0, 0, false), (0.75, 0.25));
+        assert_eq!(PBinomial(2, 0.5).evaluate(1.0, 1, false), (0.5, 0.5));
+        assert_eq!(PBinomial(2, 0.5).evaluate(1.0, 2, false), (0.75, 0.25));
+        assert_eq!(PBinomial(2, 0.5).evaluate(1.0, 3, false), (0.0, 0.0));
     }
 
     #[test]
