@@ -504,20 +504,20 @@ mod test {
         ];
         let mut state = NfaState::new(&nfa);
         state.init_state(Some(0), true);
-        assert_eq!(state.step('a'), 0.0);
+        assert_eq!(state.step_char('a'), 0.0);
 
         assert_eq!(
             utils::probs(&state.current_states_params),
             vec![1.0, 0.0, 0.0]
         );
 
-        assert_eq!(state.step('a'), 0.5);
+        assert_eq!(state.step_char('a'), 0.5);
         assert_eq!(
             utils::probs(&state.current_states_params),
             vec![0.5, 0.0, 0.5]
         );
 
-        assert_eq!(state.step('a'), 0.5);
+        assert_eq!(state.step_char('a'), 0.5);
         assert_eq!(
             utils::probs(&state.current_states_params),
             // NOTE wouold be more logical the other way around
