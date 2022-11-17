@@ -64,7 +64,7 @@ pub fn parse_options(matches: ArgMatches) -> crate::Result<Config> {
     let verbosity = match matches.occurrences_of("v") {
         0 => 0,
         1 => 1,
-        2 | _ => 2,
+        _ => 2,
     };
 
     Ok(Config {

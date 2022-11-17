@@ -3,6 +3,7 @@ use crate::ast::{AstNode, Kind};
 use crate::nfa::{State, StateParams};
 use itertools::Itertools;
 
+use pest::iterators::Pair;
 use statrs::distribution::{Bernoulli, Binomial, Discrete, Geometric};
 use statrs::statistics::Distribution;
 use std::collections::{HashMap, HashSet};
@@ -43,7 +44,7 @@ impl Dist {
     /// would return a Normal distribution centered at 2.
     pub fn complete_from(
         quantifier_kind: &Kind,
-        quantifier_dist_pair: pest::iterators::Pair<'_, crate::parser::Rule>,
+        quantifier_dist_pair: Pair<'_, crate::parser::Rule>,
     ) -> Self {
         let n = match quantifier_kind {
             Kind::ExactQuantifier(n) => *n,
@@ -76,7 +77,7 @@ impl Dist {
     ///
     /// if log is true, log-probabilities are used
     pub fn evaluate(&self, p0: f64, n: u64, log: bool) -> (f64, f64) {
-        // Spexial distributions
+        // Special distributions
         match self {
             Dist::Constant(p) => match log {
                 true => return (p0 + p, p0 + p),

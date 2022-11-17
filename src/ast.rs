@@ -1,7 +1,7 @@
 use crate::distribution::Dist;
-#[allow(dead_code)]
 use crate::parser::Rule;
 use itertools::Itertools;
+use pest::iterators::Pair;
 use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -57,7 +57,7 @@ impl fmt::Display for AstNode {
     }
 }
 
-pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
+pub fn build_ast_from_expr(pair: Pair<Rule>) -> AstNode {
     match pair.as_rule() {
         Rule::Alternation => {
             let mut pair = pair.into_inner();
@@ -73,18 +73,14 @@ pub fn build_ast_from_expr(pair: pest::iterators::Pair<Rule>) -> AstNode {
             }
             left_ast
         }
-        Rule::AnchorEnd => {
-            AstNode {
-                length: 1,
-                kind: Kind::AnchorEnd,
-            }
-        }
-        Rule::AnchorStart => {
-            AstNode {
-                length: 0,
-                kind: Kind::AnchorStart,
-            }
-        }
+        Rule::AnchorEnd => AstNode {
+            length: 1,
+            kind: Kind::AnchorEnd,
+        },
+        Rule::AnchorStart => AstNode {
+            length: 0,
+            kind: Kind::AnchorStart,
+        },
         Rule::Concat | Rule::Concats => {
             let mut pair = pair.into_inner();
             let (left, right) = pair.next_tuple().unwrap();
