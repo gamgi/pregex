@@ -10,7 +10,7 @@ pub fn probs(params: &HashMap<usize, StateParams>) -> Vec<f64> {
         .collect::<Vec<f64>>()
 }
 
-pub fn find_max<'a, I>(vals: I) -> f64
+pub fn find_max<I>(vals: I) -> f64
 where
     I: Iterator<Item = f64>,
 {

@@ -28,7 +28,7 @@ impl State {
     pub fn from(node: AstNode, outs: Outs) -> State {
         State {
             kind: node.kind,
-            outs: outs,
+            outs,
             dist: None,
         }
     }
@@ -132,7 +132,7 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist
             Frag {
                 states: [split.states, left.states, right.states].concat(),
                 start: split.start,
-                outs: outs,
+                outs,
             }
         }
         Kind::AnchorEnd => Frag {
@@ -161,7 +161,7 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist
             // literal as start
             states: vec![State::from(ast, outs)],
             start: index,
-            outs: outs,
+            outs,
         },
         Kind::Quantified(quantifier, quantified, distribution) => {
             quantifier_to_frag(*quantifier, *quantified, index, outs, distribution)
@@ -171,7 +171,7 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist
             // quantifier as start
             states: vec![State::new(ast.kind, outs, distribution)],
             start: index,
-            outs: outs,
+            outs,
         },
         Kind::Start => Frag {
             // start points to outs.
@@ -192,7 +192,7 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist
             // split as start
             states: vec![State::from(ast, outs)],
             start: index,
-            outs: outs,
+            outs,
         },
         _ => {
             panic!("{} is not allowed in the AST", ast.kind.to_string());
@@ -226,11 +226,11 @@ fn quantifier_to_frag(
                         distribution,
                     );
 
-                    return Frag {
+                    Frag {
                         states: [left.states, quantifier.states].concat(),
                         start: quantifier.start,
-                        outs: outs,
-                    };
+                        outs,
+                    }
                 }
                 _ => {
                     /*
@@ -253,11 +253,11 @@ fn quantifier_to_frag(
                         _ => quantifier.start,
                     };
 
-                    return Frag {
+                    Frag {
                         states: [left.states, quantifier.states].concat(),
-                        start: start,
-                        outs: outs,
-                    };
+                        start,
+                        outs,
+                    }
                 }
             }
         }
@@ -276,14 +276,14 @@ fn quantifier_to_frag(
                 (Some(index), outs.0),
                 distribution,
             );
-            return Frag {
+            Frag {
                 states: [left.states, quantifier.states].concat(),
                 start: left.start,
-                outs: outs,
-            };
+                outs,
+            }
         }
         _ => {
-            panic!("{} is not a valid quantifier", quantifier.kind.to_string());
+            panic!("{} is not a valid quantifier", quantifier.kind);
         }
     }
 }

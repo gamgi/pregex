@@ -67,11 +67,11 @@ pub fn parse_options(matches: ArgMatches) -> crate::Result<Config> {
         2 | _ => 2,
     };
 
-    return Ok(Config {
+    Ok(Config {
         normalize,
         pattern,
         input_string,
         input_file,
         verbosity,
-    });
+    })
 }

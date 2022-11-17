@@ -15,18 +15,18 @@ pub struct NfaState<'a> {
 
 impl NfaState<'_> {
     pub fn new(nfa: &Vec<State>) -> NfaState {
-        return NfaState {
-            nfa: nfa,
+        NfaState {
+            nfa,
             current_states: HashSet::new(),
             current_states_params: HashMap::new(),
             visited: HashSet::new(),
-        };
+        }
     }
 
     pub fn update_states_counts(&mut self, states: &HashMap<usize, f64>) {
         // TODO how is count dependent on p?
         states
-            .into_iter()
+            .iter()
             .for_each(|(i, p)| self.update_state(*i, 0.0, true));
     }
 
@@ -34,7 +34,7 @@ impl NfaState<'_> {
     pub fn add_states(&mut self, states: &HashMap<usize, f64>, force: bool) -> f64 {
         utils::find_max(
             states
-                .into_iter()
+                .iter()
                 .map(|(i, p)| self.add_state(Some(*i), force, *p)),
         )
     }
@@ -52,14 +52,14 @@ impl NfaState<'_> {
             None => 0.0,
         };
         let state = &self.nfa[idx];
-        return (p, state);
+        (p, state)
     }
 
     fn get_params_mut(&mut self, idx: usize) -> &mut StateParams {
         let state = &self.nfa[idx];
         self.current_states_params
             .entry(idx)
-            .or_insert(StateParams::new(0.0, 0))
+            .or_insert_with(||StateParams::new(0.0, 0))
     }
 
     /// Add state to set of possible states. Returns max(p(terminal)).
@@ -197,7 +197,7 @@ impl NfaState<'_> {
                 .join(" ")
         );
         debug!("  check p terminal={}", result);
-        return result;
+        result
     }
 
     fn update_state(&mut self, i: usize, p: f64, count: bool) {

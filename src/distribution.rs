@@ -2,7 +2,7 @@
 use crate::ast::{AstNode, Kind};
 use crate::nfa::{State, StateParams};
 use itertools::Itertools;
-use pest;
+
 use statrs::distribution::{Bernoulli, Binomial, Discrete, Geometric};
 use statrs::statistics::Distribution;
 use std::collections::{HashMap, HashSet};

@@ -8,7 +8,7 @@ use log::Level;
 use std::collections::HashSet;
 
 pub fn match_p(nfa: &Vec<State>, string: &str) -> Option<f64> {
-    if nfa.len() == 0 {
+    if nfa.is_empty() {
         return Some(1.);
     }
     let mut state = NfaState::new(nfa);
