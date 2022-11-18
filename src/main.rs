@@ -9,8 +9,8 @@ extern crate pest_derive;
 extern crate log;
 extern crate env_logger;
 
-extern crate clap;
 use {
+    clap::Parser,
     clap::{App, Arg, ArgMatches},
     log::Level,
     std::error::Error,
