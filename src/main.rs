@@ -17,6 +17,7 @@ mod distribution;
 mod nfa;
 mod parser;
 mod regex;
+mod regex_state;
 mod visualization;
 
 use crate::cli::Config;

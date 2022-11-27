@@ -74,8 +74,6 @@ impl Dist {
 
     /// Evaluate (p0, p1) for state arrows (state.outs)
     /// from p0 and number of visits to current node
-    ///
-    /// if log is true, log-probabilities are used
     pub fn evaluate(&self, p0: f64, n: u64, log: bool) -> (f64, f64) {
         // Special distributions
         match self {
@@ -86,9 +84,9 @@ impl Dist {
             Dist::ExactlyTimes(n_match) => {
                 // does not depend on log
                 if n == *n_match {
-                    return (0.0, p0);
+                    return (0.0, 1.0);
                 } else if n < *n_match {
-                    return (p0, 0.0);
+                    return (1.0, 0.0);
                 } else {
                     return (0.0, 0.0);
                 }
@@ -100,22 +98,29 @@ impl Dist {
         let p = match self {
             Dist::PGeometric(n_min, c) => {
                 if n < *n_min {
-                    return (p0, 0.0);
+                    return (1.0, 0.0);
                 }
                 let x = n - n_min + 1;
-                match log {
+                let p = match log {
+                    // match log {
                     true => Geometric::new(*c).unwrap().ln_pmf(x),
                     false => Geometric::new(*c).unwrap().pmf(x),
                 }
+                return ((1. - p), p);
             }
             Dist::PBinomial(n_max, p) => {
                 if n > *n_max {
                     return (0.0, 0.0);
                 }
                 let x = n;
+                let ppp = Binomial::new(*p, *n_max).unwrap().pmf(x);
+
+                // return (p0, p0 * ppp);
+                return (1.0 - ppp, ppp);
                 match log {
                     true => Binomial::new(*p, *n_max).unwrap().ln_pmf(x),
-                    false => Binomial::new(*p, *n_max).unwrap().pmf(x),
+                    // false => Binomial::new(*p, *n_max).unwrap().pmf(x),
+                    false => ppp,
                 }
             }
             Dist::PBernoulli(n_max, p) => {
@@ -134,7 +139,10 @@ impl Dist {
         // Calculate complement and return as out arrow probabilities (p0, p1)
         match log {
             true => ((1.0_f64 - p.exp()).ln() + p0, p + p0),
+            // false => ((1. - p) * p0, p * p0),
             false => ((1. - p) * p0, p * p0),
+            // false => (p * p0, p * p0),
+            // false => ((1. - p), p),
         }
     }
 }
@@ -197,14 +205,15 @@ mod test {
     }
     #[test]
     fn test_distribution_binomial_degenerate() {
-        // p = 1, the distribution is concentrated at 0
+        // p = 0, the distribution is concentrated at 0
         assert_eq!(Dist::PBinomial(0, 1.0).evaluate(1.0, 0, false), (0.0, 1.0));
         assert_eq!(Dist::PBinomial(0, 1.0).evaluate(1.0, 1, false), (0.0, 0.0));
         assert_eq!(Dist::PBinomial(0, 1.0).evaluate(1.0, 2, false), (0.0, 0.0));
 
-        // p = 1, the distribution is concentrated at 1
+        // p = 1, the distribution is concentrated at n
         assert_eq!(Dist::PBinomial(1, 1.0).evaluate(1.0, 1, false), (0.0, 1.0));
         assert_eq!(Dist::PBinomial(1, 1.0).evaluate(1.0, 2, false), (0.0, 0.0));
+        assert_eq!(Dist::PBinomial(5, 1.0).evaluate(1.0, 5, false), (0.0, 1.0));
     }
 
     #[test]
