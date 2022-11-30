@@ -77,7 +77,7 @@ impl Dist {
         // Special distributions
         match self {
             Dist::Constant(p) => match log {
-                true => return (*p, *p),
+                true => return (p.ln(), p.ln()),
                 false => return (*p, *p),
             },
             Dist::ExactlyTimes(n_match) => {
@@ -139,10 +139,23 @@ impl Dist {
 #[cfg(test)]
 mod test {
     use super::*;
+    use approx::assert_relative_eq;
+
+    fn assert_tuple_nearly_eq(a: (f64, f64), b: (f64, f64), epsilon: f64) {
+        assert_relative_eq!(a.0, b.0, epsilon = 0.01);
+        assert_relative_eq!(a.1, b.1, epsilon = 0.01);
+    }
+
     #[test]
     fn test_distribution_constant() {
         assert_eq!(Dist::Constant(1.0).evaluate(1, false), (1.0, 1.0));
         assert_eq!(Dist::Constant(0.5).evaluate(1, false), (0.5, 0.5));
+    }
+
+    #[test]
+    fn test_distribution_constant_log() {
+        assert_tuple_nearly_eq(Dist::Constant(1.0).evaluate(1, true), (0., 0.), 0.01);
+        assert_tuple_nearly_eq(Dist::Constant(0.5).evaluate(1, true), (-0.69, -0.69), 0.01);
     }
 
     #[test]
