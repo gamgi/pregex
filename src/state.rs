@@ -91,7 +91,7 @@ impl NfaState<'_> {
                 Kind::Quantifier(_) | Kind::Split | Kind::ExactQuantifier(_) => {
                     let params = self.get_params_mut(idx);
                     let (p0, p1) = match &state.dist {
-                        Some(dist) => dist.evaluate(p, params.n, false),
+                        Some(dist) => dist.evaluate(params.n, false),
                         None => (p, p),
                     };
                     debug!(

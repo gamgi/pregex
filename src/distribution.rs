@@ -73,13 +73,12 @@ impl Dist {
     }
 
     /// Evaluate (p0, p1) for state arrows (state.outs)
-    /// from p0 and number of visits to current node
-    pub fn evaluate(&self, p0: f64, n: u64, log: bool) -> (f64, f64) {
+    pub fn evaluate(&self, n: u64, log: bool) -> (f64, f64) {
         // Special distributions
         match self {
             Dist::Constant(p) => match log {
-                true => return (p0 + p, p0 + p),
-                false => return (p0 * p, p0 * p),
+                true => return (*p, *p),
+                false => return (*p, *p),
             },
             Dist::ExactlyTimes(n_match) => {
                 // does not depend on log
@@ -101,31 +100,24 @@ impl Dist {
                     return (1.0, 0.0);
                 }
                 let x = n - n_min + 1;
-                let p = match log {
-                    // match log {
+                match log {
                     true => Geometric::new(*c).unwrap().ln_pmf(x),
                     false => Geometric::new(*c).unwrap().pmf(x),
                 }
-                return ((1. - p), p);
             }
             Dist::PBinomial(n_max, p) => {
                 if n > *n_max {
                     return (0.0, 0.0);
                 }
                 let x = n;
-                let ppp = Binomial::new(*p, *n_max).unwrap().pmf(x);
-
-                // return (p0, p0 * ppp);
-                return (1.0 - ppp, ppp);
                 match log {
                     true => Binomial::new(*p, *n_max).unwrap().ln_pmf(x),
-                    // false => Binomial::new(*p, *n_max).unwrap().pmf(x),
-                    false => ppp,
+                    false => Binomial::new(*p, *n_max).unwrap().pmf(x),
                 }
             }
             Dist::PBernoulli(n_max, p) => {
                 if n > *n_max {
-                    return (p0, 0.0);
+                    return (1.0, 0.0);
                 }
                 let x = n;
                 match log {
@@ -138,11 +130,8 @@ impl Dist {
 
         // Calculate complement and return as out arrow probabilities (p0, p1)
         match log {
-            true => ((1.0_f64 - p.exp()).ln() + p0, p + p0),
-            // false => ((1. - p) * p0, p * p0),
-            false => ((1. - p) * p0, p * p0),
-            // false => (p * p0, p * p0),
-            // false => ((1. - p), p),
+            true => ((1. - p.exp()).ln(), p),
+            false => (1. - p, p),
         }
     }
 }
@@ -152,90 +141,66 @@ mod test {
     use super::*;
     #[test]
     fn test_distribution_constant() {
-        assert_eq!(Dist::Constant(1.0).evaluate(1.0, 1, false), (1.0, 1.0));
-        assert_eq!(Dist::Constant(1.0).evaluate(0.5, 1, false), (0.5, 0.5));
-        assert_eq!(Dist::Constant(0.5).evaluate(1.0, 1, false), (0.5, 0.5));
+        assert_eq!(Dist::Constant(1.0).evaluate(1, false), (1.0, 1.0));
+        assert_eq!(Dist::Constant(0.5).evaluate(1, false), (0.5, 0.5));
     }
 
     #[test]
     fn test_distribution_exactly_times() {
-        assert_eq!(Dist::ExactlyTimes(2).evaluate(1.0, 0, false), (1.0, 0.0));
-        assert_eq!(Dist::ExactlyTimes(2).evaluate(1.0, 1, false), (1.0, 0.0));
-        assert_eq!(Dist::ExactlyTimes(2).evaluate(1.0, 2, false), (0.0, 1.0));
-        assert_eq!(Dist::ExactlyTimes(2).evaluate(1.0, 3, false), (0.0, 0.0));
-
-        assert_eq!(Dist::ExactlyTimes(2).evaluate(0.5, 0, false), (0.5, 0.0));
-        assert_eq!(Dist::ExactlyTimes(2).evaluate(0.5, 1, false), (0.5, 0.0));
-        assert_eq!(Dist::ExactlyTimes(2).evaluate(0.5, 2, false), (0.0, 0.5));
-        assert_eq!(Dist::ExactlyTimes(2).evaluate(0.5, 3, false), (0.0, 0.0));
+        assert_eq!(Dist::ExactlyTimes(2).evaluate(0, false), (1.0, 0.0));
+        assert_eq!(Dist::ExactlyTimes(2).evaluate(1, false), (1.0, 0.0));
+        assert_eq!(Dist::ExactlyTimes(2).evaluate(2, false), (0.0, 1.0));
+        assert_eq!(Dist::ExactlyTimes(2).evaluate(3, false), (0.0, 0.0));
     }
 
     #[test]
+    #[rustfmt::skip]
     fn test_distribution_geometric_1_or_more() {
-        assert_eq!(Dist::PGeometric(1, 0.5).evaluate(1.0, 0, false), (1.0, 0.0));
-        assert_eq!(Dist::PGeometric(1, 0.5).evaluate(1.0, 1, false), (0.5, 0.5));
-        assert_eq!(
-            Dist::PGeometric(1, 0.5).evaluate(1.0, 2, false),
-            (0.75, 0.25)
-        );
-
-        assert_eq!(Dist::PGeometric(1, 0.5).evaluate(0.5, 0, false), (0.5, 0.0));
-        assert_eq!(
-            Dist::PGeometric(1, 0.5).evaluate(0.5, 1, false),
-            (0.25, 0.25)
-        );
-        assert_eq!(
-            Dist::PGeometric(1, 0.5).evaluate(0.5, 2, false),
-            (0.375, 0.125)
-        );
+        assert_eq!(Dist::PGeometric(1, 0.5).evaluate( 0, false), (1.0, 0.0));
+        assert_eq!(Dist::PGeometric(1, 0.5).evaluate( 1, false), (0.5, 0.5));
+        assert_eq!(Dist::PGeometric(1, 0.5).evaluate( 2, false), (0.75, 0.25));
     }
 
     #[test]
     fn test_distribution_geometric_2_or_more() {
-        assert_eq!(Dist::PGeometric(2, 0.5).evaluate(1.0, 0, false), (1.0, 0.0));
-        assert_eq!(Dist::PGeometric(2, 0.5).evaluate(1.0, 1, false), (1.0, 0.0));
-        assert_eq!(Dist::PGeometric(2, 0.5).evaluate(1.0, 2, false), (0.5, 0.5));
-
-        assert_eq!(Dist::PGeometric(2, 0.5).evaluate(0.5, 0, false), (0.5, 0.0));
-        assert_eq!(Dist::PGeometric(2, 0.5).evaluate(0.5, 1, false), (0.5, 0.0));
-        assert_eq!(
-            Dist::PGeometric(2, 0.5).evaluate(0.5, 2, false),
-            (0.25, 0.25)
-        );
+        assert_eq!(Dist::PGeometric(2, 0.5).evaluate(0, false), (1.0, 0.0));
+        assert_eq!(Dist::PGeometric(2, 0.5).evaluate(1, false), (1.0, 0.0));
+        assert_eq!(Dist::PGeometric(2, 0.5).evaluate(2, false), (0.5, 0.5));
     }
+
     #[test]
     fn test_distribution_binomial_degenerate() {
         // p = 0, the distribution is concentrated at 0
-        assert_eq!(Dist::PBinomial(0, 1.0).evaluate(1.0, 0, false), (0.0, 1.0));
-        assert_eq!(Dist::PBinomial(0, 1.0).evaluate(1.0, 1, false), (0.0, 0.0));
-        assert_eq!(Dist::PBinomial(0, 1.0).evaluate(1.0, 2, false), (0.0, 0.0));
+        assert_eq!(Dist::PBinomial(0, 1.0).evaluate(0, false), (0.0, 1.0));
+        assert_eq!(Dist::PBinomial(0, 1.0).evaluate(1, false), (0.0, 0.0));
+        assert_eq!(Dist::PBinomial(0, 1.0).evaluate(2, false), (0.0, 0.0));
 
         // p = 1, the distribution is concentrated at n
-        assert_eq!(Dist::PBinomial(1, 1.0).evaluate(1.0, 1, false), (0.0, 1.0));
-        assert_eq!(Dist::PBinomial(1, 1.0).evaluate(1.0, 2, false), (0.0, 0.0));
-        assert_eq!(Dist::PBinomial(5, 1.0).evaluate(1.0, 5, false), (0.0, 1.0));
+        assert_eq!(Dist::PBinomial(1, 1.0).evaluate(1, false), (0.0, 1.0));
+        assert_eq!(Dist::PBinomial(1, 1.0).evaluate(2, false), (0.0, 0.0));
+        assert_eq!(Dist::PBinomial(5, 1.0).evaluate(5, false), (0.0, 1.0));
     }
 
     #[test]
     fn test_distribution_binomial_up_to_1() {
-        assert_eq!(Dist::PBinomial(1, 0.5).evaluate(1.0, 0, false), (0.5, 0.5));
-        assert_eq!(Dist::PBinomial(1, 0.5).evaluate(1.0, 1, false), (0.5, 0.5));
-        assert_eq!(Dist::PBinomial(1, 0.5).evaluate(1.0, 2, false), (0.0, 0.0));
+        assert_eq!(Dist::PBinomial(1, 0.5).evaluate(0, false), (0.5, 0.5));
+        assert_eq!(Dist::PBinomial(1, 0.5).evaluate(1, false), (0.5, 0.5));
+        assert_eq!(Dist::PBinomial(1, 0.5).evaluate(2, false), (0.0, 0.0));
     }
 
     #[test]
     fn test_distribution_binomial_up_to_2() {
         use Dist::PBinomial;
-        assert_eq!(PBinomial(2, 0.5).evaluate(1.0, 0, false), (0.75, 0.25));
-        assert_eq!(PBinomial(2, 0.5).evaluate(1.0, 1, false), (0.5, 0.5));
-        assert_eq!(PBinomial(2, 0.5).evaluate(1.0, 2, false), (0.75, 0.25));
-        assert_eq!(PBinomial(2, 0.5).evaluate(1.0, 3, false), (0.0, 0.0));
+        assert_eq!(PBinomial(2, 0.5).evaluate(0, false), (0.75, 0.25));
+        assert_eq!(PBinomial(2, 0.5).evaluate(1, false), (0.5, 0.5));
+        assert_eq!(PBinomial(2, 0.5).evaluate(2, false), (0.75, 0.25));
+        assert_eq!(PBinomial(2, 0.5).evaluate(3, false), (0.0, 0.0));
     }
 
     #[test]
     fn test_distribution_bernoulli() {
-        assert_eq!(Dist::PBernoulli(1, 0.5).evaluate(1.0, 0, false), (0.5, 0.5));
-        assert_eq!(Dist::PBernoulli(1, 0.5).evaluate(1.0, 1, false), (0.5, 0.5));
-        assert_eq!(Dist::PBernoulli(2, 0.5).evaluate(1.0, 2, false), (1.0, 0.0));
+        assert_eq!(Dist::PBernoulli(1, 0.5).evaluate(0, false), (0.5, 0.5));
+        assert_eq!(Dist::PBernoulli(1, 0.5).evaluate(1, false), (0.5, 0.5));
+        assert_eq!(Dist::PBernoulli(2, 0.5).evaluate(2, false), (1.0, 0.0));
     }
 }

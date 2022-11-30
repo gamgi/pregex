@@ -101,7 +101,7 @@ pub fn evaluate_state(
                 // quntifier p is existing (base p) or incoming
                 let p = *states.get(&idx).unwrap_or(&p);
                 let (p0, p1) = match &state.dist {
-                    Some(dist) => dist.evaluate(p, n, false),
+                    Some(dist) => dist.evaluate(n, false),
                     None => (p, p),
                 };
 
