@@ -16,6 +16,10 @@ pub struct Config {
     pub pattern: String,
 
     /// String to match
-    #[clap()]
-    pub input_string: String,
+    #[clap(
+        required_unless_present("input-file"),
+        conflicts_with("input-file"),
+        value_name = "STRING"
+    )]
+    pub input_string: Option<String>,
 }

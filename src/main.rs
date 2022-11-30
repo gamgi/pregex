@@ -57,7 +57,13 @@ fn input_reader(config: &cli::Config) -> Result<BufReader<Box<dyn Read>>> {
             "-" => Box::new(io::stdin()),
             _ => Box::new(File::open(input_file)?),
         },
-        None => Box::new(Cursor::new(config.input_string.to_string())),
+        None => Box::new(Cursor::new(
+            config
+                .input_string
+                .as_ref()
+                .and_then(|s| Some(s.to_string()))
+                .expect("input string to have been specified"),
+        )),
     };
 
     Ok(BufReader::new(reader))
