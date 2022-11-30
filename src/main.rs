@@ -26,6 +26,7 @@ pub type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
 
 fn main() -> Result<()> {
     let config = Config::parse();
+    env_logger::init();
     let asts = parser::parse(&config.pattern)?;
     let nfa = nfa::asts_to_nfa(asts);
     let reader = input_reader(&config)?;

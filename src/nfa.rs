@@ -62,6 +62,20 @@ impl State {
             dist: None,
         }
     }
+    pub fn literal(char: char, outs: Outs) -> State {
+        State {
+            kind: Kind::Literal(char),
+            outs,
+            dist: None,
+        }
+    }
+    pub fn split(outs: Outs) -> State {
+        State {
+            kind: Kind::Split,
+            outs,
+            dist: None,
+        }
+    }
 }
 
 type Outs = (Option<usize>, Option<usize>);

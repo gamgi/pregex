@@ -5,7 +5,7 @@ use crate::{
     distribution::Dist,
     nfa::State,
     regex_state::{evaluate_state, initial_state, terminal_state_p, Token, Tokens, Transition},
-    state, visualization,
+    visualization,
 };
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};

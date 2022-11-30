@@ -4,6 +4,7 @@ use crate::distribution::Dist;
 use crate::nfa::{State, StateParams};
 use crate::utils;
 use itertools::Itertools;
+use log::debug;
 use std::collections::{HashMap, HashSet};
 
 pub struct NfaState<'a> {
@@ -521,7 +522,7 @@ mod test {
         assert_eq!(
             utils::probs(&state.current_states_params),
             // NOTE wouold be more logical the other way around
-            vec![0.375, 0.0, 0.125]
+            vec![0.75, 0.0, 0.25]
         );
     }
 }

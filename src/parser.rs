@@ -1,5 +1,6 @@
 use crate::ast::{build_ast_from_expr, AstNode, Kind};
 use pest::{iterators::Pair, Parser};
+use pest_derive::Parser;
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]

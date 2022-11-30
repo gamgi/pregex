@@ -4,7 +4,7 @@ use crate::{
     ast::{AstNode, Kind},
     distribution::Dist,
     nfa::State,
-    state, visualization,
+    visualization,
 };
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
