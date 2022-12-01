@@ -10,7 +10,7 @@ use crate::{
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
-pub fn match_likelihood<T>(nfa: &Vec<State>, input: &T) -> Option<f64>
+pub fn match_likelihood<T>(nfa: &Vec<State>, input: &T, debug_visualize: bool) -> Option<f64>
 where
     T: Into<Tokens> + Clone,
 {
@@ -19,7 +19,9 @@ where
     let tokens: Vec<Token> = input.clone().into().as_vec();
 
     for token in tokens.iter() {
-        visualization::debug_print(&states, &counts, nfa, &token);
+        if debug_visualize {
+            visualization::debug_print(&states, &counts, nfa, &token);
+        }
         states = step_states(states, &counts, token, nfa);
         counts = add_counts(&states, &counts);
     }

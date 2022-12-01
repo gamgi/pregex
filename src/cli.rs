@@ -11,6 +11,10 @@ pub struct Config {
     #[clap(short, long, value_name = "FILE")]
     pub input_file: Option<String>,
 
+    /// Visualize result
+    #[clap(short = 'z', action)]
+    pub visualize: bool,
+
     /// Regex pattern
     #[clap(required = true)]
     pub pattern: String,

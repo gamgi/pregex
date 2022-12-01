@@ -33,7 +33,7 @@ fn main() -> Result<()> {
 
     for line in reader.lines() {
         match line {
-            Ok(input) => match regex::match_likelihood(&nfa, &input) {
+            Ok(input) => match regex::match_likelihood(&nfa, &input, config.visualize) {
                 Some(p) => println!("{:.5}\t{}", p, input),
                 None => {}
             },
