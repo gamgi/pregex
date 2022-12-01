@@ -1,5 +1,6 @@
 use crate::ast::{build_ast_from_expr, AstNode, Kind};
-use pest::Parser;
+use pest::{iterators::Pair, Parser};
+use pest_derive::Parser;
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -37,7 +38,7 @@ mod test {
 
     #[test]
     fn test_parser_single_ast() {
-        let result = parse("a").unwrap_or(vec![]);
+        let result = parse("a").unwrap_or_default();
         let expected = vec![
             AstNode {
                 length: 1,
@@ -53,7 +54,7 @@ mod test {
 
     #[test]
     fn test_parser_alternation_ast() {
-        let result = parse("a|b").unwrap_or(vec![]);
+        let result = parse("a|b").unwrap_or_default();
         let expected = vec![
             AstNode {
                 length: 3, // space for split
@@ -78,7 +79,7 @@ mod test {
 
     #[test]
     fn test_parser_conditional_ast() {
-        let result = parse("a?").unwrap_or(vec![]);
+        let result = parse("a?").unwrap_or_default();
         let expected = vec![
             AstNode {
                 length: 2,
@@ -104,7 +105,7 @@ mod test {
 
     #[test]
     fn test_parser_conditional_first_ast() {
-        let result = parse("a?b").unwrap_or(vec![]);
+        let result = parse("a?b").unwrap_or_default();
         let expected = vec![
             AstNode {
                 length: 3,
@@ -139,7 +140,7 @@ mod test {
 
     #[test]
     fn test_parser_exact_quantifier_ast() {
-        let result = parse("a{2}").unwrap_or(vec![]);
+        let result = parse("a{2}").unwrap_or_default();
         let expected = vec![
             AstNode {
                 length: 2,
@@ -165,7 +166,7 @@ mod test {
 
     #[test]
     fn test_parser_exact_quantifier_dist_ast() {
-        let result = parse("a{2~Geo(0.5)}").unwrap_or(vec![]);
+        let result = parse("a{2~Geo(0.5)}").unwrap_or_default();
         let expected = vec![
             AstNode {
                 length: 2,
@@ -191,7 +192,7 @@ mod test {
 
     #[test]
     fn test_parser_anchor_start_ast() {
-        let result = parse("^a").unwrap_or(vec![]);
+        let result = parse("^a").unwrap_or_default();
         let expected = vec![
             AstNode {
                 length: 0,
@@ -211,7 +212,7 @@ mod test {
 
     #[test]
     fn test_parser_anchor_end_ast() {
-        let result = parse("a$").unwrap_or(vec![]);
+        let result = parse("a$").unwrap_or_default();
         let expected = vec![
             AstNode {
                 length: 1,
@@ -231,7 +232,7 @@ mod test {
 
     #[test]
     fn test_parser_concat_length() {
-        let result = parse("ab").unwrap_or(vec![]).first().unwrap().to_owned();
+        let result = parse("ab").unwrap_or_default().first().unwrap().to_owned();
         assert_eq!(result.length, 2);
     }
 

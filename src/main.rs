@@ -1,18 +1,11 @@
 #![allow(unused_imports)]
 #![feature(hash_drain_filter)]
 
-extern crate pest;
-#[macro_use]
-extern crate pest_derive;
-
-#[macro_use]
-extern crate log;
-extern crate env_logger;
-
-extern crate clap;
 use {
-    clap::{App, Arg, ArgMatches},
+    clap::Parser,
+    itertools::Itertools,
     log::Level,
+    statrs::distribution::{Bernoulli, Binomial, Discrete, Geometric},
     std::error::Error,
     std::io::{self, prelude::*, BufReader, Cursor, Read},
     std::process::exit,
@@ -23,31 +16,28 @@ mod cli;
 mod distribution;
 mod nfa;
 mod parser;
-mod runner;
-mod state;
-mod utils;
+mod regex;
+mod regex_state;
+mod visualization;
+
+use crate::cli::Config;
 
 pub type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
 
 fn main() -> Result<()> {
+    let config = Config::parse();
     env_logger::init();
-    let matches = cli::options().get_matches();
-    let config = cli::parse_options(matches)?;
-
     let asts = parser::parse(&config.pattern)?;
     let nfa = nfa::asts_to_nfa(asts);
-
     let reader = input_reader(&config)?;
+
     for line in reader.lines() {
         match line {
-            Err(err) => {
-                eprintln!("Failed to read input: {}", err);
-                exit(1);
-            }
-            Ok(input_string) => match runner::match_p(&nfa, &input_string) {
-                Some(p) => println!("{:.5}\t{}", p, input_string),
+            Ok(input) => match regex::match_likelihood(&nfa, &input, config.visualize) {
+                Some(p) => println!("{:.5}\t{}", p, input),
                 None => {}
             },
+            Err(e) => return Err(e.into()),
         }
     }
 
@@ -67,7 +57,13 @@ fn input_reader(config: &cli::Config) -> Result<BufReader<Box<dyn Read>>> {
             "-" => Box::new(io::stdin()),
             _ => Box::new(File::open(input_file)?),
         },
-        None => Box::new(Cursor::new(config.input_string.to_string())),
+        None => Box::new(Cursor::new(
+            config
+                .input_string
+                .as_ref()
+                .and_then(|s| Some(s.to_string()))
+                .expect("input string to have been specified"),
+        )),
     };
 
     Ok(BufReader::new(reader))
