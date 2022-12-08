@@ -1,3 +1,4 @@
+use crate::charclass::build_chars;
 use crate::distribution::Dist;
 use crate::parser::Rule;
 use itertools::Itertools;
@@ -18,6 +19,7 @@ pub enum Kind {
     Concatenation(Box<AstNode>, Box<AstNode>),
     ExactQuantifier(u64),
     Literal(char),
+    Class(Vec<char>, Option<Dist>),
     Dot,
     Split,
     Start,
@@ -31,6 +33,7 @@ impl fmt::Display for Kind {
         match &self {
             Kind::Literal(c) => write!(f, "{}", c),
             Kind::Dot => write!(f, "."),
+            Kind::Class(c, _) => write!(f, "[{}]", c.iter().join("")),
             Kind::Concatenation(l, r) => write!(f, "{}{}.", l, r),
             Kind::Quantified(r, l, Some(q)) => write!(f, "{}{{{}{}}}", l, r, q),
             Kind::Quantified(r, l, None) => match r.kind {
@@ -121,6 +124,34 @@ pub fn build_ast_from_expr(pair: Pair<Rule>) -> AstNode {
             length: 1,
             kind: Kind::Dot,
         },
+        Rule::LongClass => {
+            let mut pair = pair.into_inner();
+            let chars = build_chars(pair.next().unwrap());
+            // pair.next is Option<Dist>
+            let class_dist = match pair.next() {
+                // TODO no need for Kind::Dot
+                Some(pair) => Some(Dist::complete_from(&Kind::Dot, pair)),
+                None => Dist::default_from(&Kind::Dot),
+            };
+            AstNode {
+                length: 1,
+                kind: Kind::Class(chars, class_dist),
+            }
+        }
+        Rule::CharacterClass => {
+            let chars = build_chars(pair);
+            AstNode {
+                length: 1,
+                kind: Kind::Class(chars, None),
+            }
+        }
+        Rule::PosixClass | Rule::ShortClass => {
+            let chars = build_chars(pair);
+            AstNode {
+                length: 1,
+                kind: Kind::Class(chars, None),
+            }
+        }
         Rule::EOI => AstNode {
             length: 0,
             kind: Kind::Terminal,

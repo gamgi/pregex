@@ -10,19 +10,24 @@ Concat          =  { Factor ~ Factor }
 Group           = _{ "(" ~ ( Alternation | Expression ) ~ ")" }
 
 Factor          = _{ Quantified | Group | Token }
-Token           = _{ Literal | Dot }
+Token           = _{ Literal | Dot | Class }
 Quantified      =  { ( Token | Group ) ~ Quantifier }
 Literal         =  { ASCII_ALPHANUMERIC | " " }
 Dot             =  { "." }
 
+Class           = _{ LongClass }
+LongClass       =  { "[" ~ ( CharacterClass) ~ Dist? ~ "]" }
+CharacterClass  =  { Token+ }
+
 Quantifier      = _{ ShortQuantifier | LongQuantifier }
 ShortQuantifier =  { "+" | "?" | "*" }
-LongQuantifier  = _{ "{" ~ ExactQuantifier ~ QuantifierDist? ~ "}" }
+LongQuantifier  = _{ "{" ~ ExactQuantifier ~ Dist? ~ "}" }
 ExactQuantifier =  { QuantifierParam }
-
 QuantifierParam =  { ASCII_DIGIT* }
-QuantifierDist  =  { "~" ~ DistName ~ "(" ~ DistParam ~ ")" }
-DistName        =  { ^"Geo" | ^"Bin" | ^"Ber" }
+
+Dist            =  { "~" ~ DistName ~ ( "(" ~ DistParams ~ ")" )? }
+DistName        =  { ^"Geo" | ^"Bin" | ^"Ber" | ^"Zipf" }
+DistParams      = _{ DistParam ~ ("," ~ DistParam)? }
 DistParam       =  { ASCII_FLOAT }
 
 ASCII_FLOAT     = _{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }

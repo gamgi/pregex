@@ -12,6 +12,7 @@ use {
 };
 
 mod ast;
+mod charclass;
 mod cli;
 mod distribution;
 mod nfa;
