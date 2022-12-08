@@ -223,6 +223,38 @@ mod test {
     }
 
     #[test]
+    fn test_parser_short_class_ast() {
+        let result = parse("\\d").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], None),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_posix_class_ast() {
+        let result = parse("[[:digit:]]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], None),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
     fn test_parser_anchor_start_ast() {
         let result = parse("^a").unwrap_or_default();
         let expected = vec![

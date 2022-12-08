@@ -15,8 +15,10 @@ Quantified      =  { ( Token | Group ) ~ Quantifier }
 Literal         =  { ASCII_ALPHANUMERIC | " " }
 Dot             =  { "." }
 
-Class           = _{ LongClass }
-LongClass       =  { "[" ~ ( CharacterClass) ~ Dist? ~ "]" }
+Class           = _{ ShortClass | LongClass }
+ShortClass      =  { "\\w" | "\\s" | "\\d" }
+LongClass       =  { "[" ~ (PosixClass | CharacterClass) ~ Dist? ~ "]" }
+PosixClass      =  { "[:digit:]" | "[:space:]" }
 CharacterClass  =  { Token+ }
 
 Quantifier      = _{ ShortQuantifier | LongQuantifier }
