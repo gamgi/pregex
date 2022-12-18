@@ -17,6 +17,7 @@ pub enum Dist {
     PGeometric(u64, f64), // n_min, p
     PBinomial(u64, f64),  // n_max, p
     PBernoulli(u64, f64), // n_max, p
+    PZipf(u64, f64),      // n_max, s
     Map(HashMap<char, f64>), // chr -> p
 }
 
@@ -28,6 +29,7 @@ impl fmt::Display for Dist {
             Dist::PGeometric(_, p) => write!(f, "~Geo({})", p),
             Dist::PBinomial(_, p) => write!(f, "~Bin({})", p),
             Dist::PBernoulli(_, p) => write!(f, "~Ber({})", p),
+            Dist::PZipf(_, p) => write!(f, "~Zipf({})", p),
             Dist::Map(p) => write!(f, "~Freq({:?})", p),
         }
     }
@@ -98,13 +100,8 @@ impl Dist {
             }
             "zipf" => {
                 let p: f64 = params.first().unwrap_or(&"1.0").parse().unwrap();
-                let chars = c.expect("chars to be passed");
-                let mapping: HashMap<char, f64> = chars
-                    .iter()
-                    .enumerate()
-                    .map(|(i, c)| (*c, zipf(i + 1, p, chars.len())))
-                    .collect();
-                Dist::Map(mapping)
+                let n = c.expect("chars to be passed").len() as u64;
+                Dist::PZipf(n, p)
             }
             _ => {
                 panic!("Unknown distribution {}", name)
@@ -119,7 +116,7 @@ impl Dist {
     }
 
     /// Evaluate (p0, p1) for state arrows (state.outs) with character context
-    pub fn evaluate_char(&self, c: char, n: u64, log: bool) -> (f64, f64) {
+    pub fn evaluate_char(&self, _: char, n: u64, log: bool) -> (f64, f64) {
         // Special distributions
         match self {
             Dist::Constant(p) => match log {
@@ -171,8 +168,8 @@ impl Dist {
                     false => Bernoulli::new(*p).unwrap().pmf(x),
                 }
             }
-            Dist::Map(p) => {
-                let p = *p.get(&c).unwrap_or(&0.0);
+            Dist::PZipf(n_max, s) => {
+                let p = zipf(n + 1, *s, *n_max);
                 return (1. - p, p);
             }
             _ => unreachable!(),
@@ -187,8 +184,8 @@ impl Dist {
 }
 
 /// Calculates the probability mass function for the zipf distribution at `x`
-fn zipf(x: usize, s: f64, n: usize) -> f64 {
-    let normalizer: f64 = (1..(n + 1)).map(|n_i| 1.0 / (n_i as f64).powf(s)).sum();
+fn zipf(x: u64, s: f64, n_max: u64) -> f64 {
+    let normalizer: f64 = (1..(n_max + 1)).map(|n_i| 1.0 / (n_i as f64).powf(s)).sum();
     (1.0 / (x as f64).powf(s)) / normalizer
 }
 

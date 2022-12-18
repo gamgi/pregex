@@ -1,5 +1,5 @@
 use crate::charclass::build_chars;
-use crate::distribution::Dist;
+use crate::distribution::{Dist, DistLink};
 use crate::parser::Rule;
 use itertools::Itertools;
 use pest::iterators::Pair;
@@ -23,9 +23,9 @@ pub enum Kind {
     Split,
     Start,
     Terminal,
-    Classified(Box<AstNode>, Option<Dist>),
+    Classified(Box<AstNode>, Option<DistLink>),
     Class(Vec<char>),
-    Quantified(Box<AstNode>, Box<AstNode>, Option<Dist>),
+    Quantified(Box<AstNode>, Box<AstNode>, Option<DistLink>),
     Quantifier(char),
 }
 
@@ -114,7 +114,7 @@ pub fn build_ast_from_expr(pair: Pair<Rule>) -> AstNode {
                 kind: Kind::Quantified(
                     Box::new(quantifier_ast),
                     Box::new(left_ast),
-                    quantifier_dist,
+                    quantifier_dist.map(|d| DistLink::Counted(d)),
                 ),
             }
         }
@@ -141,7 +141,7 @@ pub fn build_ast_from_expr(pair: Pair<Rule>) -> AstNode {
             match class_dist {
                 Some(dist) => AstNode {
                     length: 1,
-                    kind: Kind::Classified(Box::new(left_ast), Some(dist)),
+                    kind: Kind::Classified(Box::new(left_ast), Some(DistLink::Indexed(dist))),
                 },
                 None => left_ast,
             }
