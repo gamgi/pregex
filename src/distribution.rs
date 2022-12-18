@@ -2,6 +2,7 @@
 use crate::ast::{AstNode, Kind};
 use crate::nfa::State;
 use crate::parser::Rule;
+use crate::regex_state::Token;
 use itertools::Itertools;
 
 use pest::iterators::Pair;
@@ -181,12 +182,83 @@ impl Dist {
             false => (1. - p, p),
         }
     }
+
+    pub fn count(self) -> DistLink {
+        DistLink::Counted(self)
+    }
+
+    pub fn index(self) -> DistLink {
+        DistLink::Indexed(self)
+    }
+
+    pub fn mapped(self, map: HashMap<char, u64>) -> DistLink {
+        DistLink::Mapped(self, map)
+    }
 }
 
 /// Calculates the probability mass function for the zipf distribution at `x`
 fn zipf(x: u64, s: f64, n_max: u64) -> f64 {
     let normalizer: f64 = (1..(n_max + 1)).map(|n_i| 1.0 / (n_i as f64).powf(s)).sum();
     (1.0 / (x as f64).powf(s)) / normalizer
+}
+
+/// Link for mapping state parameters to distribution parameters
+#[derive(Debug, PartialEq, Clone)]
+pub enum DistLink {
+    /// Distribution indexed by number of visits
+    Counted(Dist),
+    /// Distribution indexed by token position
+    Indexed(Dist),
+    /// Distribution indexed by token value in map
+    Mapped(Dist, HashMap<char, u64>),
+}
+
+impl DistLink {
+    /// Calculates the probability mass function for the linked distribution.
+    ///
+    /// Equivalent to pmf(link(token, n_visits))
+    pub fn pmf_link(&self, token: &Token, n_visits: u64, kind: &Kind, log: bool) -> (f64, f64) {
+        match self {
+            DistLink::Counted(d) => d.evaluate(n_visits, log),
+            DistLink::Indexed(d) => {
+                let c = match token {
+                    Kind::Literal(c) => c,
+                    _ => return (0., 0.),
+                };
+                match kind {
+                    Kind::Class(chars) => match chars.iter().position(|&r| r == *c) {
+                        Some(idx) => d.evaluate(idx as u64, log),
+                        None => (0., 0.),
+                    },
+                    _ => (0., 0.),
+                }
+            }
+            DistLink::Mapped(d, map) => {
+                let c = match token {
+                    Kind::Literal(c) => c,
+                    _ => return (0., 0.),
+                };
+
+                match map.get(c) {
+                    Some(idx) => d.evaluate(*idx, log),
+                    None => (0., 0.),
+                }
+            }
+        }
+    }
+}
+
+impl fmt::Display for DistLink {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            DistLink::Counted(d) | DistLink::Indexed(d) => {
+                write!(f, "{}", d)
+            }
+            DistLink::Mapped(d, m) => {
+                write!(f, "{}={:?}", d, m)
+            }
+        }
+    }
 }
 
 #[cfg(test)]

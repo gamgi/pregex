@@ -140,7 +140,7 @@ mod test {
             State::new(
                 Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
-                Some(Dist::ExactlyTimes(2)),
+                Some(Dist::ExactlyTimes(2).count()),
             ),
             State::literal('b', (Some(4), None)),
             State::terminal(),
@@ -171,7 +171,7 @@ mod test {
             State::new(
                 Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
-                Some(Dist::PGeometric(2, 0.5)),
+                Some(Dist::PGeometric(2, 0.5).count()),
             ),
             State::literal('b', (Some(4), None)),
             State::terminal(),

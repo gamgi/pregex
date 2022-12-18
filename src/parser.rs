@@ -27,7 +27,7 @@ pub fn parse(source: &str) -> std::result::Result<Vec<AstNode>, pest::error::Err
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::distribution::Dist;
+    use crate::distribution::{Dist, DistLink};
 
     fn ast_as_str(asts: Vec<AstNode>) -> String {
         asts.into_iter()
@@ -153,7 +153,7 @@ mod test {
                         length: 1,
                         kind: Kind::Literal('a'),
                     }),
-                    Some(Dist::ExactlyTimes(2)),
+                    Some(Dist::ExactlyTimes(2).count()),
                 ),
             },
             AstNode {
@@ -179,7 +179,7 @@ mod test {
                         length: 1,
                         kind: Kind::Literal('a'),
                     }),
-                    Some(Dist::PGeometric(2, 0.5)),
+                    Some(Dist::PGeometric(2, 0.5).count()),
                 ),
             },
             AstNode {
@@ -207,7 +207,7 @@ mod test {
     }
 
     #[test]
-    fn test_parser_exact_class_dist_ast() {
+    fn test_parser_exact_class_indexed_dist_ast() {
         let result = parse("[abc~Geo(0.5)]").unwrap_or_default();
         let expected = vec![
             AstNode {
@@ -217,7 +217,7 @@ mod test {
                         length: 1,
                         kind: Kind::Class(vec!['a', 'b', 'c']),
                     }),
-                    Some(Dist::PGeometric(0, 0.5)),
+                    Some(Dist::PGeometric(0, 0.5).index()),
                 ),
             },
             AstNode {

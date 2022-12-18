@@ -101,7 +101,7 @@ pub fn evaluate_state(
                 // quntifier p is existing (base p) or incoming
                 let pb = *states.get(&idx).unwrap_or(&p);
                 let (_, p1) = match &state.dist {
-                    Some(dist) => dist.evaluate(n, false),
+                    Some(dist) => dist.pmf_link(token, n, &state.kind, false),
                     None => (1., 1.),
                 };
 
@@ -127,19 +127,13 @@ pub fn evaluate_state(
                     }
                 }
             }
-            Kind::Class(ref match_c) => {
+            Kind::Class(_) => {
                 if is_epsilon {
                     return vec![Transition(Some(idx), p)];
                 }
-                let (n, c) = match token {
-                    Kind::Literal(c) => match match_c.iter().position(|&r| r == *c) {
-                        Some(i) => (i as u64, *c),
-                        None => return vec![],
-                    },
-                    _ => return vec![],
-                };
+
                 let (_, p1) = match &state.dist {
-                    Some(dist) => dist.evaluate_char(c, n, false),
+                    Some(dist) => dist.pmf_link(token, 0, &state.kind, false),
                     None => (1., 1.),
                 };
                 return evaluate_state(state.outs.0, token, p * p1, nfa, counts, states, true);
@@ -195,6 +189,8 @@ impl From<String> for Tokens {
 
 #[cfg(test)]
 mod test {
+    use crate::distribution::DistLink;
+
     use super::*;
 
     #[test]
@@ -262,7 +258,7 @@ mod test {
             State::new(
                 Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
-                Some(Dist::PGeometric(2, 0.5)),
+                Some(DistLink::Counted(Dist::PGeometric(2, 0.5))),
             ),
             State::literal('b', (Some(4), None)),
             State::terminal(),
@@ -316,7 +312,7 @@ mod test {
             State::new(
                 Kind::Class(vec!['a', 'b', 'c']),
                 (Some(2), None),
-                Some(Dist::PGeometric(0, 0.5)),
+                Some(DistLink::Indexed(Dist::PGeometric(0, 0.5))),
             ),
             State::terminal(),
         ];
