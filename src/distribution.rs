@@ -1,6 +1,7 @@
 #![allow(dead_code, unused_variables)]
 use crate::ast::{AstNode, Kind};
-use crate::nfa::{State, StateParams};
+use crate::nfa::State;
+use crate::parser::Rule;
 use itertools::Itertools;
 
 use pest::iterators::Pair;
@@ -9,13 +10,14 @@ use statrs::statistics::Distribution;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-#[derive(Debug, PartialEq, PartialOrd, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Dist {
     Constant(f64),        // p
     ExactlyTimes(u64),    // n_match
     PGeometric(u64, f64), // n_min, p
     PBinomial(u64, f64),  // n_max, p
     PBernoulli(u64, f64), // n_max, p
+    Map(HashMap<char, f64>), // chr -> p
 }
 
 impl fmt::Display for Dist {
@@ -26,6 +28,7 @@ impl fmt::Display for Dist {
             Dist::PGeometric(_, p) => write!(f, "~Geo({})", p),
             Dist::PBinomial(_, p) => write!(f, "~Bin({})", p),
             Dist::PBernoulli(_, p) => write!(f, "~Ber({})", p),
+            Dist::Map(p) => write!(f, "~Freq({:?})", p),
         }
     }
 }
@@ -48,23 +51,60 @@ impl Dist {
     ) -> Self {
         let n = match quantifier_kind {
             Kind::ExactQuantifier(n) => *n,
-            _ => 1, // TODO what to do here
+            _ => 0, // required n is zero
+        };
+        let c = match quantifier_kind {
+            Kind::Class(c) => Some(c),
+            _ => None,
         };
 
-        let (name, param) = quantifier_dist_pair.into_inner().collect_tuple().unwrap();
-        let name = name.as_span().as_str().to_lowercase();
+        let mut pair = quantifier_dist_pair.into_inner();
+        let name = pair.next().unwrap().as_span().as_str().to_lowercase();
+
+        // Parse parameters, that may be supplied in various formats
+        let (params, params_named): (Vec<Option<&str>>, Vec<_>) = pair
+            .map(|p| match p.as_rule() {
+                // indexed form, i.e. (0.0, 0.1, 0.2, ...)
+                Rule::IndexParam => (Some(p.as_str()), None),
+                // named form, i.e. (a=0.0, b=0.1, c=0.2, ...)
+                Rule::NamedParam => {
+                    let p_str = p.as_str();
+                    let (key, val) = p_str.trim().split_at(p_str.find("=").unwrap());
+                    (None, Some((key, &val[1..])))
+                }
+                _ => unreachable!(),
+            })
+            .unzip();
+        let params: Vec<&str> = params.into_iter().flatten().collect();
+        let params_named: HashMap<&str, &str> = params_named.into_iter().flatten().collect();
+
+        // Instantiate distribution with possible default parameters
         match name.as_str() {
+            "const" => {
+                let p: f64 = params.first().unwrap_or(&"1.0").parse().unwrap();
+                Dist::Constant(p)
+            }
             "geo" => {
-                let p: f64 = param.as_str().parse().unwrap();
+                let p: f64 = params.first().unwrap_or(&"0.5").parse().unwrap();
                 Dist::PGeometric(n, p)
             }
             "bin" => {
-                let p: f64 = param.as_str().parse().unwrap();
+                let p: f64 = params.first().unwrap_or(&"1.0").parse().unwrap();
                 Dist::PBinomial(n, p)
             }
             "ber" => {
-                let p: f64 = param.as_str().parse().unwrap();
+                let p: f64 = params.first().unwrap_or(&"1.0").parse().unwrap();
                 Dist::PBernoulli(n, p)
+            }
+            "zipf" => {
+                let p: f64 = params.first().unwrap_or(&"1.0").parse().unwrap();
+                let chars = c.expect("chars to be passed");
+                let mapping: HashMap<char, f64> = chars
+                    .iter()
+                    .enumerate()
+                    .map(|(i, c)| (*c, zipf(i + 1, p, chars.len())))
+                    .collect();
+                Dist::Map(mapping)
             }
             _ => {
                 panic!("Unknown distribution {}", name)
@@ -74,6 +114,12 @@ impl Dist {
 
     /// Evaluate (p0, p1) for state arrows (state.outs)
     pub fn evaluate(&self, n: u64, log: bool) -> (f64, f64) {
+        // TODO pass variant of Token instead of random character
+        self.evaluate_char('?', n, log)
+    }
+
+    /// Evaluate (p0, p1) for state arrows (state.outs) with character context
+    pub fn evaluate_char(&self, c: char, n: u64, log: bool) -> (f64, f64) {
         // Special distributions
         match self {
             Dist::Constant(p) => match log {
@@ -125,6 +171,10 @@ impl Dist {
                     false => Bernoulli::new(*p).unwrap().pmf(x),
                 }
             }
+            Dist::Map(p) => {
+                let p = *p.get(&c).unwrap_or(&0.0);
+                return (1. - p, p);
+            }
             _ => unreachable!(),
         };
 
@@ -134,6 +184,12 @@ impl Dist {
             false => (1. - p, p),
         }
     }
+}
+
+/// Calculates the probability mass function for the zipf distribution at `x`
+fn zipf(x: usize, s: f64, n: usize) -> f64 {
+    let normalizer: f64 = (1..(n + 1)).map(|n_i| 1.0 / (n_i as f64).powf(s)).sum();
+    return (1.0 / (x as f64).powf(s)) / normalizer;
 }
 
 #[cfg(test)]

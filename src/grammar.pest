@@ -28,8 +28,11 @@ ExactQuantifier =  { QuantifierParam }
 QuantifierParam =  { ASCII_DIGIT* }
 
 Dist            =  { "~" ~ DistName ~ ( "(" ~ DistParams ~ ")" )? }
-DistName        =  { ^"Geo" | ^"Bin" | ^"Ber" | ^"Zipf" }
+DistName        =  { ^"Geo" | ^"Bin" | ^"Ber" | ^"Const" | ^"Zipf" }
 DistParams      = _{ DistParam ~ ("," ~ DistParam)? }
-DistParam       =  { ASCII_FLOAT }
+DistParam       = _{ IndexParam | NamedParam }
+IndexParam      =  { FLOAT_NUMBER }
+NamedParam      =  { ASCII_ALPHA ~ "=" ~ ( FLOAT_NUMBER | ASCII_DIGIT+ ) }
 
-ASCII_FLOAT     = _{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
+
+FLOAT_NUMBER    = _{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
