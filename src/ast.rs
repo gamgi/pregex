@@ -146,12 +146,10 @@ pub fn build_ast_from_expr(pair: Pair<Rule>) -> AstNode {
                 None => left_ast,
             }
         }
-        Rule::CharacterClass | Rule::ShortClass | Rule::PosixClass => {
-            AstNode {
-                length: 1,
-                kind: Kind::Class(build_chars(pair)),
-            }
-        }
+        Rule::CharacterClass | Rule::ShortClass | Rule::PosixClass => AstNode {
+            length: 1,
+            kind: Kind::Class(build_chars(pair)),
+        },
         Rule::EOI => AstNode {
             length: 0,
             kind: Kind::Terminal,

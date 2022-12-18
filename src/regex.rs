@@ -156,7 +156,7 @@ mod test {
         let counts = add_counts(&states, &counts);
         assert_eq!(counts, [(1, 2), (2, 1)].into());
         let states = step_states(states, &counts, &Kind::Literal('a'), &nfa);
-        assert_eq!(states, [(1, 0.0), (2, 1.0), (3, 1.0)].into());
+        assert_eq!(states, [(1, 1.0), (2, 1.0), (3, 1.0)].into());
 
         let counts = add_counts(&states, &counts);
         let states = step_states(states, &counts, &Kind::Literal('b'), &nfa);
@@ -186,11 +186,11 @@ mod test {
 
         let states = step_states(states, &counts, &Kind::Literal('a'), &nfa);
         let counts = add_counts(&states, &counts);
-        assert_eq!(states, [(1, 0.5), (2, 1.0), (3, 0.5)].into());
+        assert_eq!(states, [(1, 1.0), (2, 1.0), (3, 0.5)].into());
 
         let states = step_states(states, &counts, &Kind::Literal('a'), &nfa);
         let counts = add_counts(&states, &counts);
-        assert_eq!(states, [(1, 0.75), (2, 1.0), (3, 0.25)].into());
+        assert_eq!(states, [(1, 1.0), (2, 1.0), (3, 0.25)].into());
 
         let states = step_states(states, &counts, &Kind::Literal('b'), &nfa);
         assert_eq!(states, [(4, 0.25)].into());

@@ -99,16 +99,17 @@ pub fn evaluate_state(
                 // quantifier now visited current + 1 times
                 let n = *counts.get(&idx).unwrap_or(&0) + 1;
                 // quntifier p is existing (base p) or incoming
-                let p = *states.get(&idx).unwrap_or(&p);
-                let (p0, p1) = match &state.dist {
+                let pb = *states.get(&idx).unwrap_or(&p);
+                let (_, p1) = match &state.dist {
                     Some(dist) => dist.evaluate(n, false),
                     None => (1., 1.),
                 };
 
                 return [
                     // Always add quantifier state for counting & storing base p
-                    vec![Transition(Some(idx), p)],
-                    evaluate_state(state.outs.0, token, p * p0, nfa, counts, states, true),
+                    vec![Transition(Some(idx), pb)],
+                    // Re-add outs.0 (quantified) with base p, since quantifier p is applied only to next state
+                    evaluate_state(state.outs.0, token, p, nfa, counts, states, true),
                     evaluate_state(state.outs.1, token, p * p1, nfa, counts, states, true),
                 ]
                 .concat();
@@ -282,7 +283,7 @@ mod test {
             transitions,
             vec![
                 Transition(Some(2), 1.0),
-                Transition(Some(1), 1.0),
+                Transition(Some(1), 1.0), // Store p_entry
                 Transition(Some(3), 0.0)
             ]
         );
@@ -302,9 +303,39 @@ mod test {
             transitions,
             vec![
                 Transition(Some(2), 1.0),
-                Transition(Some(1), 0.5),
+                Transition(Some(1), 1.0), // Keep p_entry
                 Transition(Some(3), 0.5)
             ]
+        );
+    }
+
+    #[test]
+    fn test_evaluate_state_geo_class() {
+        let nfa = vec![
+            State::anchor_start(Some(1)),
+            State::new(
+                Kind::Class(vec!['a', 'b', 'c']),
+                (Some(2), None),
+                Some(Dist::PGeometric(0, 0.5)),
+            ),
+            State::terminal(),
+        ];
+        let counts: HashMap<usize, u64> = HashMap::new();
+        let states: HashMap<usize, f64> = HashMap::new();
+
+        let transitions = evaluate_state(
+            Some(1),
+            &Kind::Literal('a'),
+            1.0,
+            &nfa,
+            &counts,
+            &states,
+            false,
+        );
+        assert_eq!(
+            transitions,
+            // NOTE: The character class is not a quantifier
+            vec![Transition(Some(2), 0.5),]
         );
     }
 }
