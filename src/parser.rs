@@ -191,6 +191,76 @@ mod test {
     }
 
     #[test]
+    fn test_parser_exact_class_ast() {
+        let result = parse("[abc]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Class(vec!['a', 'b', 'c']),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_exact_class_dist_ast() {
+        let result = parse("[abc~Geo(0.5)]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(vec!['a', 'b', 'c']),
+                    }),
+                    Some(Dist::PGeometric(0, 0.5)),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_short_class_ast() {
+        let result = parse("\\d").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_posix_class_ast() {
+        let result = parse("[[:digit:]]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
     fn test_parser_anchor_start_ast() {
         let result = parse("^a").unwrap_or_default();
         let expected = vec![
@@ -288,5 +358,15 @@ mod test {
     #[test]
     fn test_parser_exact_quantifier_dist() {
         assert_eq!(ast_as_str(parse("a{2~Geo(1.0)}").unwrap()), "a{2~Geo(1)}");
+    }
+
+    #[test]
+    fn test_parser_exact_class() {
+        assert_eq!(ast_as_str(parse("[ab]").unwrap()), "[ab]");
+    }
+
+    #[test]
+    fn test_parser_exact_class_with_dist() {
+        assert_eq!(ast_as_str(parse("[ab~Const]").unwrap()), "[[ab]]");
     }
 }

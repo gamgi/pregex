@@ -14,7 +14,7 @@ pub fn debug_print(
     nfa: &Vec<State>,
     token: &Kind,
 ) {
-    for (i, _) in nfa.iter().enumerate() {
+    for (i, state) in nfa.iter().enumerate() {
         // let (p, n) = match states.get(&i) {
         //     Some((p, n)) => (f64::clamp(p * 4.0, 0., 4.) as usize, *n as u8),
         //     None => (0, 1),
@@ -23,10 +23,11 @@ pub fn debug_print(
             Some(n) => usize::clamp(*n as usize, 0, 4),
             None => 0,
         };
+        let s_len = state.kind.to_string().len();
         let s = String::from(char::from_u32(0x2800 + PIXEL_MAP[n] as u32).unwrap());
-        print!("{}", s);
+        print!("{: <width$}", s, width = s_len);
     }
-    println!("");
+    println!();
     for (i, state) in nfa.iter().enumerate() {
         let c = match states.get(&i) {
             Some(p) => (
@@ -44,7 +45,7 @@ pub fn debug_print(
     let probs = states
         .keys()
         .sorted()
-        .map(|i| format!("p({})={:?}", nfa[*i].kind, states[i]))
+        .map(|i| format!("p({})={:.4}", nfa[*i].kind, states[i]))
         .collect::<Vec<String>>();
     println!("{}", probs.join(" ").cyan());
 }

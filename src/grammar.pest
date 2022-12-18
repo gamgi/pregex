@@ -10,19 +10,29 @@ Concat          =  { Factor ~ Factor }
 Group           = _{ "(" ~ ( Alternation | Expression ) ~ ")" }
 
 Factor          = _{ Quantified | Group | Token }
-Token           = _{ Literal | Dot }
+Token           = _{ Literal | Dot | Class }
 Quantified      =  { ( Token | Group ) ~ Quantifier }
 Literal         =  { ASCII_ALPHANUMERIC | " " }
 Dot             =  { "." }
 
+Class           = _{ ShortClass | LongClass }
+ShortClass      =  { "\\w" | "\\s" | "\\d" }
+LongClass       =  { "[" ~ (PosixClass | CharacterClass | ShortClass) ~ Dist? ~ "]" }
+PosixClass      =  { "[:digit:]" | "[:space:]" }
+CharacterClass  =  { ( Literal | Dot | ShortClass )+ }
+
 Quantifier      = _{ ShortQuantifier | LongQuantifier }
 ShortQuantifier =  { "+" | "?" | "*" }
-LongQuantifier  = _{ "{" ~ ExactQuantifier ~ QuantifierDist? ~ "}" }
+LongQuantifier  = _{ "{" ~ ExactQuantifier ~ Dist? ~ "}" }
 ExactQuantifier =  { QuantifierParam }
-
 QuantifierParam =  { ASCII_DIGIT* }
-QuantifierDist  =  { "~" ~ DistName ~ "(" ~ DistParam ~ ")" }
-DistName        =  { ^"Geo" | ^"Bin" | ^"Ber" }
-DistParam       =  { ASCII_FLOAT }
 
-ASCII_FLOAT     = _{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
+Dist            =  { "~" ~ DistName ~ ( "(" ~ DistParams ~ ")" )? }
+DistName        =  { ^"Geo" | ^"Bin" | ^"Ber" | ^"Const" | ^"Zipf" }
+DistParams      = _{ DistParam ~ ("," ~ DistParam)? }
+DistParam       = _{ IndexParam | NamedParam }
+IndexParam      =  { FLOAT_NUMBER }
+NamedParam      =  { ASCII_ALPHA ~ "=" ~ ( FLOAT_NUMBER | ASCII_DIGIT+ ) }
+
+
+FLOAT_NUMBER    = _{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
