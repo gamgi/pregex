@@ -177,6 +177,20 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist
             start: index,
             outs,
         },
+        Kind::Classified(class, distribution) => Frag {
+            // classifier points to class
+            // classifier as start
+            states: vec![State::new(class.kind, outs, distribution)],
+            start: index,
+            outs,
+        },
+        Kind::Class(_) => Frag {
+            // class points to outs
+            // class as start
+            states: vec![State::new(ast.kind, outs, distribution)],
+            start: index,
+            outs,
+        },
         Kind::Quantified(quantifier, quantified, distribution) => {
             quantifier_to_frag(*quantifier, *quantified, index, outs, distribution)
         }
@@ -712,6 +726,56 @@ mod test {
                 Some(Dist::PGeometric(2, 0.5)),
             ),
         ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_compile_exact_class() {
+        let result = ast_to_nfa(
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(vec!['a', 'b', 'c']),
+                    }),
+                    None,
+                ),
+            },
+            0,
+            1,
+        );
+        let expected = vec![State::from(
+            AstNode {
+                length: 1,
+                kind: Kind::Class(vec!['a', 'b', 'c']),
+            },
+            (Some(1), None),
+        )];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_compile_exact_class_dist() {
+        let result = ast_to_nfa(
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(vec!['a', 'b', 'c']),
+                    }),
+                    Some(Dist::PGeometric(0, 0.5)),
+                ),
+            },
+            0,
+            1,
+        );
+        let expected = vec![State::new(
+            Kind::Class(vec!['a', 'b', 'c']),
+            (Some(1), None),
+            Some(Dist::PGeometric(0, 0.5)),
+        )];
         assert_eq!(result, expected);
     }
 

@@ -196,7 +196,7 @@ mod test {
         let expected = vec![
             AstNode {
                 length: 1,
-                kind: Kind::Class(vec!['a', 'b', 'c'], None),
+                kind: Kind::Class(vec!['a', 'b', 'c']),
             },
             AstNode {
                 length: 0,
@@ -212,7 +212,13 @@ mod test {
         let expected = vec![
             AstNode {
                 length: 1,
-                kind: Kind::Class(vec!['a', 'b', 'c'], Some(Dist::PGeometric(1, 0.5))),
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(vec!['a', 'b', 'c']),
+                    }),
+                    Some(Dist::PGeometric(0, 0.5)),
+                ),
             },
             AstNode {
                 length: 0,
@@ -228,7 +234,7 @@ mod test {
         let expected = vec![
             AstNode {
                 length: 1,
-                kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], None),
+                kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
             },
             AstNode {
                 length: 0,
@@ -244,7 +250,7 @@ mod test {
         let expected = vec![
             AstNode {
                 length: 1,
-                kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], None),
+                kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
             },
             AstNode {
                 length: 0,

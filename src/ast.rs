@@ -19,11 +19,12 @@ pub enum Kind {
     Concatenation(Box<AstNode>, Box<AstNode>),
     ExactQuantifier(u64),
     Literal(char),
-    Class(Vec<char>, Option<Dist>),
     Dot,
     Split,
     Start,
     Terminal,
+    Classified(Box<AstNode>, Option<Dist>),
+    Class(Vec<char>),
     Quantified(Box<AstNode>, Box<AstNode>, Option<Dist>),
     Quantifier(char),
 }
@@ -33,9 +34,13 @@ impl fmt::Display for Kind {
         match &self {
             Kind::Literal(c) => write!(f, "{}", c),
             Kind::Dot => write!(f, "."),
-            Kind::Class(c, _) => write!(f, "[{}]", c.iter().join("")),
+            Kind::Class(c) => write!(f, "[{}]", c.iter().join("")),
+            Kind::Classified(l, d) => match d {
+                Some(d) => write!(f, "[{}{}]", l, d),
+                None => write!(f, "[{}]", l),
+            },
             Kind::Concatenation(l, r) => write!(f, "{}{}.", l, r),
-            Kind::Quantified(r, l, Some(q)) => write!(f, "{}{{{}{}}}", l, r, q),
+            Kind::Quantified(r, l, Some(d)) => write!(f, "{}{{{}{}}}", l, r, d),
             Kind::Quantified(r, l, None) => match r.kind {
                 Kind::Quantifier(_) => write!(f, "{}{}", l, r),
                 Kind::ExactQuantifier(_) => write!(f, "{}{{{}}}", l, r),
@@ -126,30 +131,25 @@ pub fn build_ast_from_expr(pair: Pair<Rule>) -> AstNode {
         },
         Rule::LongClass => {
             let mut pair = pair.into_inner();
-            let chars = build_chars(pair.next().unwrap());
+            let left_ast = build_ast_from_expr(pair.next().unwrap());
+
             // pair.next is Option<Dist>
             let class_dist = match pair.next() {
-                // TODO no need for Kind::Dot
-                Some(pair) => Some(Dist::complete_from(&Kind::Dot, pair)),
-                None => Dist::default_from(&Kind::Dot),
+                Some(pair) => Some(Dist::complete_from(&left_ast.kind, pair)),
+                None => None,
             };
-            AstNode {
-                length: 1,
-                kind: Kind::Class(chars, class_dist),
+            match class_dist {
+                Some(dist) => AstNode {
+                    length: 1,
+                    kind: Kind::Classified(Box::new(left_ast), Some(dist)),
+                },
+                None => left_ast,
             }
         }
-        Rule::CharacterClass => {
-            let chars = build_chars(pair);
+        Rule::CharacterClass | Rule::ShortClass | Rule::PosixClass => {
             AstNode {
                 length: 1,
-                kind: Kind::Class(chars, None),
-            }
-        }
-        Rule::PosixClass | Rule::ShortClass => {
-            let chars = build_chars(pair);
-            AstNode {
-                length: 1,
-                kind: Kind::Class(chars, None),
+                kind: Kind::Class(build_chars(pair)),
             }
         }
         Rule::EOI => AstNode {

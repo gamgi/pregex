@@ -15,7 +15,12 @@ pub fn build_chars(pair: Pair<Rule>) -> Vec<char> {
         }
         Rule::CharacterClass => {
             let pairs = pair.into_inner();
-            let chars: Vec<char> = pairs.map(|r| r.as_str().chars().next().unwrap()).collect();
+            let chars: Vec<char> = pairs
+                .flat_map(|p| match p.as_rule() {
+                    Rule::PosixClass | Rule::ShortClass => build_chars(p),
+                    _ => p.as_str().chars().collect(),
+                })
+                .collect();
             chars
         }
         _ => vec![],
