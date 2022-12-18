@@ -364,4 +364,9 @@ mod test {
     fn test_parser_exact_class() {
         assert_eq!(ast_as_str(parse("[ab]").unwrap()), "[ab]");
     }
+
+    #[test]
+    fn test_parser_exact_class_with_dist() {
+        assert_eq!(ast_as_str(parse("[ab~Const]").unwrap()), "[[ab]]");
+    }
 }
