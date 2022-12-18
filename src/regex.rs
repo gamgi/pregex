@@ -15,7 +15,7 @@ where
     T: Into<Tokens> + Clone,
 {
     let mut states = initial_state(nfa, false);
-    let mut counts: HashMap<usize, u64> = HashMap::new();
+    let mut counts = HashMap::new();
     let tokens: Vec<Token> = input.clone().into().as_vec();
 
     for token in tokens.iter() {
@@ -37,7 +37,7 @@ fn step_states(
     let mut next: HashMap<usize, f64> = HashMap::new();
     for (state, p) in states.iter() {
         let state = Some(*state);
-        let transitions = evaluate_state(state, token, *p, &nfa, &counts, &states, false);
+        let transitions = evaluate_state(state, token, *p, nfa, counts, &states, false);
         for transition in transitions {
             if let Transition(Some(out), new_p) = transition {
                 let old_p = next.entry(out).or_insert(new_p);

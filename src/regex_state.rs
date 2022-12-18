@@ -15,7 +15,7 @@ pub fn initial_state(nfa: &Vec<State>, skip_start: bool) -> HashMap<usize, f64> 
         Some(0),
         &Kind::Start,
         1.0,
-        &nfa,
+        nfa,
         &HashMap::new(),
         &HashMap::new(),
         // for simpler testing (n need for Kind::Start token everywhere)

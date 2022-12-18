@@ -9,18 +9,6 @@ pub struct State {
     pub dist: Option<Dist>,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct StateParams {
-    pub p: f64, // current p
-    pub n: u64, // visit count
-}
-
-impl StateParams {
-    pub fn new(p: f64, n: u64) -> Self {
-        Self { p, n }
-    }
-}
-
 impl State {
     pub fn new(kind: Kind, outs: Outs, dist: Option<Dist>) -> State {
         State { kind, outs, dist }
@@ -62,6 +50,7 @@ impl State {
             dist: None,
         }
     }
+    #[allow(dead_code)]
     pub fn literal(char: char, outs: Outs) -> State {
         State {
             kind: Kind::Literal(char),
@@ -69,6 +58,7 @@ impl State {
             dist: None,
         }
     }
+    #[allow(dead_code)]
     pub fn split(outs: Outs) -> State {
         State {
             kind: Kind::Split,

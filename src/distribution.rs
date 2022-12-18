@@ -189,7 +189,7 @@ impl Dist {
 /// Calculates the probability mass function for the zipf distribution at `x`
 fn zipf(x: usize, s: f64, n: usize) -> f64 {
     let normalizer: f64 = (1..(n + 1)).map(|n_i| 1.0 / (n_i as f64).powf(s)).sum();
-    return (1.0 / (x as f64).powf(s)) / normalizer;
+    (1.0 / (x as f64).powf(s)) / normalizer
 }
 
 #[cfg(test)]

@@ -62,7 +62,7 @@ fn input_reader(config: &cli::Config) -> Result<BufReader<Box<dyn Read>>> {
             config
                 .input_string
                 .as_ref()
-                .and_then(|s| Some(s.to_string()))
+                .map(|s| s.to_string())
                 .expect("input string to have been specified"),
         )),
     };
