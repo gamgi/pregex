@@ -73,7 +73,7 @@ impl Dist {
                 // named form, i.e. (a=0.0, b=0.1, c=0.2, ...)
                 Rule::NamedParam => {
                     let p_str = p.as_str();
-                    let (key, val) = p_str.trim().split_at(p_str.find("=").unwrap());
+                    let (key, val) = p_str.trim().split_at(p_str.find('=').unwrap());
                     (None, Some((key, &val[1..])))
                 }
                 _ => unreachable!(),
@@ -157,6 +157,7 @@ impl Dist {
                 true => return (p.ln(), p.ln()),
                 false => return (*p, *p),
             },
+            #[allow(clippy::comparison_chain)]
             Dist::ExactlyTimes(n_match) => {
                 let n = x.unwrap();
                 // does not depend on log

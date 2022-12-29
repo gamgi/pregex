@@ -33,7 +33,7 @@ pub fn initial_state(nfa: &Vec<State>, skip_start: bool) -> HashMap<usize, f64> 
 pub fn terminal_state_p(states: &HashMap<usize, f64>, nfa: &Vec<State>) -> Option<f64> {
     // TODO may not be the terminal state
     let idx_terminal = nfa.len() - 1;
-    states.get(&idx_terminal).and_then(|p| Some(*p))
+    states.get(&idx_terminal).map(|p| *p)
 }
 
 /// Evaluate the state idx against token, return transitions to next states
@@ -88,7 +88,7 @@ pub fn evaluate_state(
                 }
             }
             Kind::Split => {
-                return evaluate_state_outs(state.outs, token, p, nfa, &counts, states, true);
+                return evaluate_state_outs(state.outs, token, p, nfa, counts, states, true);
             }
             Kind::Quantifier(_) | Kind::ExactQuantifier(_) => {
                 if !is_epsilon {

@@ -34,7 +34,10 @@ impl fmt::Display for Kind {
         match &self {
             Kind::Literal(c) => write!(f, "{}", c),
             Kind::Dot => write!(f, "."),
-            Kind::Class(c) => write!(f, "[{}]", c.iter().join("")),
+            Kind::Class(c) => match c.len() > 5 {
+                true => write!(f, "[{}..]", c.iter().take(3).join("")),
+                false => write!(f, "[{}]", c.iter().join("")),
+            },
             Kind::Classified(l, d) => match d {
                 Some(d) => write!(f, "[{}{}]", l, d),
                 None => write!(f, "[{}]", l),
