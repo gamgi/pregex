@@ -28,8 +28,7 @@ pub type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
 fn main() -> Result<()> {
     let config = Config::parse();
     env_logger::init();
-    let asts = parser::parse(&config.pattern)?;
-    let nfa = nfa::asts_to_nfa(asts);
+    let nfa = compile(&config.pattern)?;
     let reader = input_reader(&config)?;
 
     for line in reader.lines() {
@@ -43,6 +42,10 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn compile(source: &str) -> Result<Vec<nfa::State>> {
+    Ok(nfa::asts_to_nfa(parser::parse(source)?))
 }
 
 /// Get input reader based on config
