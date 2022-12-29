@@ -40,6 +40,9 @@ fn step_states(
         let transitions = evaluate_state(state, token, *p, nfa, counts, &states, false);
         for transition in transitions {
             if let Transition(Some(out), new_p) = transition {
+                if new_p == 0.0 {
+                    continue;
+                }
                 let old_p = next.entry(out).or_insert(new_p);
                 *old_p = f64::max(*old_p, new_p);
             }
@@ -140,7 +143,7 @@ mod test {
             State::new(
                 Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
-                Some(Dist::ExactlyTimes(2)),
+                Some(Dist::ExactlyTimes(2).count()),
             ),
             State::literal('b', (Some(4), None)),
             State::terminal(),
@@ -151,7 +154,7 @@ mod test {
         let counts = add_counts(&states, &HashMap::new());
         assert_eq!(counts, [(1, 1)].into());
         let states = step_states(states, &counts, &Kind::Literal('a'), &nfa);
-        assert_eq!(states, [(1, 1.0), (2, 1.0), (3, 0.0)].into());
+        assert_eq!(states, [(1, 1.0), (2, 1.0)].into());
 
         let counts = add_counts(&states, &counts);
         assert_eq!(counts, [(1, 2), (2, 1)].into());
@@ -171,7 +174,7 @@ mod test {
             State::new(
                 Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
-                Some(Dist::PGeometric(2, 0.5)),
+                Some(Dist::PGeometric(2, 0.5).count()),
             ),
             State::literal('b', (Some(4), None)),
             State::terminal(),
@@ -182,7 +185,7 @@ mod test {
 
         let states = step_states(states, &counts, &Kind::Literal('a'), &nfa);
         let counts = add_counts(&states, &counts);
-        assert_eq!(states, [(1, 1.0), (2, 1.0), (3, 0.0)].into());
+        assert_eq!(states, [(1, 1.0), (2, 1.0)].into());
 
         let states = step_states(states, &counts, &Kind::Literal('a'), &nfa);
         let counts = add_counts(&states, &counts);

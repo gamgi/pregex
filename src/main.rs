@@ -28,13 +28,14 @@ pub type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
 fn main() -> Result<()> {
     let config = Config::parse();
     env_logger::init();
-    let asts = parser::parse(&config.pattern)?;
-    let nfa = nfa::asts_to_nfa(asts);
+    let nfa = compile(&config.pattern)?;
     let reader = input_reader(&config)?;
 
     for line in reader.lines() {
         match line {
+            // TODO move debug visualize here, and use match_likelihood_stats or soething to get state out?
             Ok(input) => match regex::match_likelihood(&nfa, &input, config.visualize) {
+                // Some(p) => println!("{:.5}\t{}", p, input),
                 Some(p) => println!("{:.5}\t{}", p, input),
                 None => {}
             },
@@ -43,6 +44,10 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn compile(source: &str) -> Result<Vec<nfa::State>> {
+    Ok(nfa::asts_to_nfa(parser::parse(source)?))
 }
 
 /// Get input reader based on config
@@ -68,4 +73,101 @@ fn input_reader(config: &cli::Config) -> Result<BufReader<Box<dyn Read>>> {
     };
 
     Ok(BufReader::new(reader))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use regex::match_likelihood;
+
+    #[test]
+    fn test_basic() {
+        let nfa = compile("abc").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"ab".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"abc".to_string(), false), Some(1.0));
+        assert_eq!(
+            match_likelihood(&nfa, &"abcd".to_string(), false),
+            Some(1.0)
+        );
+    }
+
+    #[test]
+    fn test_basic_anchor() {
+        let nfa = compile("^abc$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"ab".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"abc".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"abcd".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_dot() {
+        let nfa = compile("^a.c$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"ab".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"abc".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"abcd".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_dot_quantifier_plus() {
+        let nfa = compile("^a.+c$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"ab".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"abc".to_string(), false), Some(1.0));
+        assert_eq!(
+            match_likelihood(&nfa, &"abbc".to_string(), false),
+            Some(1.0)
+        );
+        assert_eq!(match_likelihood(&nfa, &"abcd".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_dot_quantifier_question() {
+        let nfa = compile("^a.?c$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"ab".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"ac".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"abc".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"abbc".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"abcd".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_dot_quantifier_exact() {
+        let nfa = compile("^a.{2}c$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"ac".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"ab".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"abc".to_string(), false), None);
+        assert_eq!(
+            match_likelihood(&nfa, &"abbc".to_string(), false),
+            Some(1.0)
+        );
+        assert_eq!(match_likelihood(&nfa, &"abbbc".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"abcd".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_short_class() {
+        let nfa = compile("^a\\dc$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"ac".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"a1c".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"a2c".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"a12c".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"abc".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_long_class() {
+        let nfa = compile("^a[bc]c$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"ac".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"abc".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"acc".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"adc".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"abcc".to_string(), false), None);
+    }
 }

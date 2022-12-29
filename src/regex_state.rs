@@ -33,7 +33,7 @@ pub fn initial_state(nfa: &Vec<State>, skip_start: bool) -> HashMap<usize, f64> 
 pub fn terminal_state_p(states: &HashMap<usize, f64>, nfa: &Vec<State>) -> Option<f64> {
     // TODO may not be the terminal state
     let idx_terminal = nfa.len() - 1;
-    states.get(&idx_terminal).and_then(|p| Some(*p))
+    states.get(&idx_terminal).map(|p| *p)
 }
 
 /// Evaluate the state idx against token, return transitions to next states
@@ -88,7 +88,7 @@ pub fn evaluate_state(
                 }
             }
             Kind::Split => {
-                return evaluate_state_outs(state.outs, token, p, nfa, &counts, states, true);
+                return evaluate_state_outs(state.outs, token, p, nfa, counts, states, true);
             }
             Kind::Quantifier(_) | Kind::ExactQuantifier(_) => {
                 if !is_epsilon {
@@ -101,7 +101,7 @@ pub fn evaluate_state(
                 // quntifier p is existing (base p) or incoming
                 let pb = *states.get(&idx).unwrap_or(&p);
                 let (_, p1) = match &state.dist {
-                    Some(dist) => dist.evaluate(n, false),
+                    Some(dist) => dist.pmf_link(token, n, &state.kind, false),
                     None => (1., 1.),
                 };
 
@@ -113,6 +113,13 @@ pub fn evaluate_state(
                     evaluate_state(state.outs.1, token, p * p1, nfa, counts, states, true),
                 ]
                 .concat();
+            }
+            Kind::Dot => {
+                if is_epsilon {
+                    return vec![Transition(Some(idx), p)];
+                }
+
+                return evaluate_state_outs(state.outs, token, p, nfa, counts, states, true);
             }
             Kind::Literal(match_c) => {
                 if is_epsilon {
@@ -131,18 +138,20 @@ pub fn evaluate_state(
                 if is_epsilon {
                     return vec![Transition(Some(idx), p)];
                 }
-                let (n, c) = match token {
-                    Kind::Literal(c) => match match_c.iter().position(|&r| r == *c) {
-                        Some(i) => (i as u64, *c),
+
+                if let Kind::Literal(c) = token {
+                    let idx = match match_c.iter().position(|&r| r == *c) {
+                        Some(i) => i as u64,
                         None => return vec![],
-                    },
-                    _ => return vec![],
-                };
-                let (_, p1) = match &state.dist {
-                    Some(dist) => dist.evaluate_char(c, n, false),
-                    None => (1., 1.),
-                };
-                return evaluate_state(state.outs.0, token, p * p1, nfa, counts, states, true);
+                    };
+                    let (_, p1) = match &state.dist {
+                        Some(dist) => dist.pmf_link(token, idx, &state.kind, false),
+                        None => (1., 1.),
+                    };
+
+                    return evaluate_state(state.outs.0, token, p * p1, nfa, counts, states, true);
+                }
+                return vec![];
             }
             _ => {}
         }
@@ -195,6 +204,8 @@ impl From<String> for Tokens {
 
 #[cfg(test)]
 mod test {
+    use crate::distribution::DistLink;
+
     use super::*;
 
     #[test]
@@ -255,6 +266,40 @@ mod test {
     }
 
     #[test]
+    fn test_evaluate_state_dot() {
+        let nfa = vec![
+            State::start(Some(1)),
+            State::literal('a', (Some(2), None)),
+            State::dot((Some(3), None)),
+            State::terminal(),
+        ];
+        let counts: HashMap<usize, u64> = HashMap::new();
+        let states: HashMap<usize, f64> = HashMap::new();
+
+        let transitions = evaluate_state(
+            Some(1),
+            &Kind::Literal('a'),
+            1.0,
+            &nfa,
+            &counts,
+            &states,
+            false,
+        );
+        assert_eq!(transitions, vec![Transition(Some(2), 1.0)]);
+
+        let transitions = evaluate_state(
+            Some(1),
+            &Kind::Literal('b'),
+            1.0,
+            &nfa,
+            &counts,
+            &states,
+            false,
+        );
+        assert_eq!(transitions, vec![]);
+    }
+
+    #[test]
     fn test_evaluate_state_geo_quantifier() {
         let nfa = vec![
             State::anchor_start(Some(1)),
@@ -262,7 +307,7 @@ mod test {
             State::new(
                 Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
-                Some(Dist::PGeometric(2, 0.5)),
+                Some(DistLink::Counted(Dist::PGeometric(2, 0.5))),
             ),
             State::literal('b', (Some(4), None)),
             State::terminal(),
@@ -316,7 +361,7 @@ mod test {
             State::new(
                 Kind::Class(vec!['a', 'b', 'c']),
                 (Some(2), None),
-                Some(Dist::PGeometric(0, 0.5)),
+                Some(DistLink::Indexed(Dist::PGeometric(0, 0.5))),
             ),
             State::terminal(),
         ];

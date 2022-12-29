@@ -1,16 +1,16 @@
 use crate::ast::{AstNode, Kind};
-use crate::distribution::Dist;
+use crate::distribution::{Dist, DistLink};
 use crate::parser::parse;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct State {
     pub kind: Kind,
     pub outs: Outs,
-    pub dist: Option<Dist>,
+    pub dist: Option<DistLink>,
 }
 
 impl State {
-    pub fn new(kind: Kind, outs: Outs, dist: Option<Dist>) -> State {
+    pub fn new(kind: Kind, outs: Outs, dist: Option<DistLink>) -> State {
         State { kind, outs, dist }
     }
     pub fn from(node: AstNode, outs: Outs) -> State {
@@ -66,6 +66,14 @@ impl State {
             dist: None,
         }
     }
+    #[allow(dead_code)]
+    pub fn dot(outs: Outs) -> State {
+        State {
+            kind: Kind::Dot,
+            outs,
+            dist: None,
+        }
+    }
 }
 
 type Outs = (Option<usize>, Option<usize>);
@@ -114,11 +122,10 @@ pub fn asts_to_nfa(asts: Vec<AstNode>) -> Vec<State> {
 
 #[allow(dead_code)]
 pub fn ast_to_nfa(ast: AstNode, index: usize, out: usize) -> Vec<State> {
-    let nfa_frag = ast_to_frag(ast, index, (Some(out), None), None);
-    nfa_frag.states
+    ast_to_frag(ast, index, (Some(out), None), None).states
 }
 
-fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist>) -> Frag {
+fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<DistLink>) -> Frag {
     match ast.kind {
         Kind::Alternation(left, right) => {
             let right = ast_to_frag(*right, index + left.length + 1, outs, None);
@@ -223,7 +230,7 @@ fn quantifier_to_frag(
     quantified: AstNode,
     index: usize,
     outs: Outs,
-    distribution: Option<Dist>,
+    distribution: Option<DistLink>,
 ) -> Frag {
     match quantifier.kind {
         Kind::Quantifier(c) => {
@@ -634,7 +641,7 @@ mod test {
                                 length: 1,
                                 kind: Kind::Literal('b'),
                             }),
-                            Some(Dist::ExactlyTimes(2)),
+                            Some(Dist::ExactlyTimes(2).count()),
                         ),
                     }),
                 ),
@@ -660,7 +667,7 @@ mod test {
             State::new(
                 Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
-                Some(Dist::ExactlyTimes(2)),
+                Some(Dist::ExactlyTimes(2).count()),
             ),
         ];
         assert_eq!(result, expected);
@@ -687,7 +694,7 @@ mod test {
                                 length: 1,
                                 kind: Kind::Literal('b'),
                             }),
-                            Some(Dist::PGeometric(2, 0.5)),
+                            Some(Dist::PGeometric(2, 0.5).count()),
                         ),
                     }),
                 ),
@@ -713,7 +720,7 @@ mod test {
             State::new(
                 Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
-                Some(Dist::PGeometric(2, 0.5)),
+                Some(Dist::PGeometric(2, 0.5).count()),
             ),
         ];
         assert_eq!(result, expected);
@@ -755,7 +762,7 @@ mod test {
                         length: 1,
                         kind: Kind::Class(vec!['a', 'b', 'c']),
                     }),
-                    Some(Dist::PGeometric(0, 0.5)),
+                    Some(Dist::PGeometric(0, 0.5).count()),
                 ),
             },
             0,
@@ -764,7 +771,7 @@ mod test {
         let expected = vec![State::new(
             Kind::Class(vec!['a', 'b', 'c']),
             (Some(1), None),
-            Some(Dist::PGeometric(0, 0.5)),
+            Some(Dist::PGeometric(0, 0.5).count()),
         )];
         assert_eq!(result, expected);
     }
@@ -1022,7 +1029,7 @@ mod test {
             State::new(
                 Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
-                Some(Dist::ExactlyTimes(2)),
+                Some(Dist::ExactlyTimes(2).count()),
             ),
             State::from(
                 AstNode {
