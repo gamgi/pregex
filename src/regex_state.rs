@@ -114,6 +114,13 @@ pub fn evaluate_state(
                 ]
                 .concat();
             }
+            Kind::Dot => {
+                if is_epsilon {
+                    return vec![Transition(Some(idx), p)];
+                }
+
+                return evaluate_state_outs(state.outs, token, p, nfa, counts, states, true);
+            }
             Kind::Literal(match_c) => {
                 if is_epsilon {
                     return vec![Transition(Some(idx), p)];
@@ -230,6 +237,40 @@ mod test {
             State::start(Some(1)),
             State::literal('a', (Some(2), None)),
             State::literal('b', (Some(3), None)),
+            State::terminal(),
+        ];
+        let counts: HashMap<usize, u64> = HashMap::new();
+        let states: HashMap<usize, f64> = HashMap::new();
+
+        let transitions = evaluate_state(
+            Some(1),
+            &Kind::Literal('a'),
+            1.0,
+            &nfa,
+            &counts,
+            &states,
+            false,
+        );
+        assert_eq!(transitions, vec![Transition(Some(2), 1.0)]);
+
+        let transitions = evaluate_state(
+            Some(1),
+            &Kind::Literal('b'),
+            1.0,
+            &nfa,
+            &counts,
+            &states,
+            false,
+        );
+        assert_eq!(transitions, vec![]);
+    }
+
+    #[test]
+    fn test_evaluate_state_dot() {
+        let nfa = vec![
+            State::start(Some(1)),
+            State::literal('a', (Some(2), None)),
+            State::dot((Some(3), None)),
             State::terminal(),
         ];
         let counts: HashMap<usize, u64> = HashMap::new();
