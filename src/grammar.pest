@@ -29,7 +29,7 @@ QuantifierParam =  { ASCII_DIGIT* }
 
 Dist            =  { "~" ~ DistName ~ ( "(" ~ DistParams ~ ")" )? }
 DistName        =  { ^"Bin" | ^"Ber" | ^"Cat" | ^"Const" | ^"Geo" | ^"Zipf" }
-DistParams      = _{ DistParam ~ ("," ~ DistParam)? }
+DistParams      = _{ DistParam ~ ("," ~ DistParam)* }
 DistParam       = _{ IndexParam | NamedParam }
 IndexParam      =  { FLOAT_NUMBER }
 NamedParam      =  { ( Literal | Dot) ~ "=" ~ ( FLOAT_NUMBER | ASCII_DIGIT+ ) }
