@@ -66,6 +66,14 @@ impl State {
             dist: None,
         }
     }
+    #[allow(dead_code)]
+    pub fn dot(outs: Outs) -> State {
+        State {
+            kind: Kind::Dot,
+            outs,
+            dist: None,
+        }
+    }
 }
 
 type Outs = (Option<usize>, Option<usize>);
