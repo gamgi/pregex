@@ -32,7 +32,6 @@ impl fmt::Display for Dist {
             Dist::PBinomial(_, p) => write!(f, "~Bin({})", p),
             Dist::PBernoulli(_, p) => write!(f, "~Ber({})", p),
             Dist::PZipf(_, p) => write!(f, "~Zipf({})", p),
-            Dist::Map(p) => write!(f, "~Freq({:?})", p),
         }
     }
 }
@@ -238,10 +237,6 @@ impl Dist {
     pub fn index(self) -> DistLink {
         DistLink::Indexed(self)
     }
-
-    pub fn mapped(self, map: HashMap<char, u64>) -> DistLink {
-        DistLink::Mapped(self, map)
-    }
 }
 
 /// Calculates the probability mass function for the zipf distribution at `x`
@@ -257,8 +252,6 @@ pub enum DistLink {
     Counted(Dist),
     /// Distribution indexed by token position
     Indexed(Dist),
-    /// Distribution indexed by token value in map
-    Mapped(Dist, HashMap<char, u64>),
 }
 
 impl DistLink {
@@ -286,17 +279,6 @@ impl DistLink {
                     _ => (0., 0.),
                 }
             }
-            DistLink::Mapped(d, map) => {
-                let c = match token {
-                    Kind::Literal(c) => c,
-                    _ => return (0., 0.),
-                };
-
-                match map.get(c) {
-                    Some(idx) => d.evaluate(Some(*idx), log),
-                    None => (0., 0.),
-                }
-            }
         }
     }
 }
@@ -306,9 +288,6 @@ impl fmt::Display for DistLink {
         match &self {
             DistLink::Counted(d) | DistLink::Indexed(d) => {
                 write!(f, "{}", d)
-            }
-            DistLink::Mapped(d, m) => {
-                write!(f, "{}={:?}", d, m)
             }
         }
     }
