@@ -12,7 +12,7 @@ Group           = _{ "(" ~ ( Alternation | Expression ) ~ ")" }
 Factor          = _{ Quantified | Group | Token }
 Token           = _{ Literal | Dot | Class }
 Quantified      =  { ( Token | Group ) ~ Quantifier }
-Literal         =  { ASCII_ALPHANUMERIC | " " }
+Literal         =  { ASCII_ALPHANUMERIC | " " | "-" }
 Dot             =  { "." }
 
 Class           = _{ ShortClass | LongClass }
@@ -32,7 +32,7 @@ DistName        =  { ^"Bin" | ^"Ber" | ^"Cat" | ^"Const" | ^"Geo" | ^"Zipf" }
 DistParams      = _{ DistParam ~ ("," ~ DistParam)? }
 DistParam       = _{ IndexParam | NamedParam }
 IndexParam      =  { FLOAT_NUMBER }
-NamedParam      =  { ASCII_ALPHA ~ "=" ~ ( FLOAT_NUMBER | ASCII_DIGIT+ ) }
+NamedParam      =  { ( Literal | Dot) ~ "=" ~ ( FLOAT_NUMBER | ASCII_DIGIT+ ) }
 
 
 FLOAT_NUMBER    = _{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
