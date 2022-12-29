@@ -229,6 +229,177 @@ mod test {
     }
 
     #[test]
+    fn test_parser_exact_class_named_dist_ast() {
+        let result = parse("[ab~Cat(a=0.7,b=0.2)]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(vec!['a', 'b']),
+                    }),
+                    Some(Dist::Categorical(vec![0.10000000000000009, 0.7, 0.2]).index()),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_exact_class_named_dist_rest_ast() {
+        let result = parse("[abc~Cat(a=0.7)]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(vec!['a', 'b', 'c']),
+                    }),
+                    Some(
+                        Dist::Categorical(vec![0.0, 0.7, 0.15000000000000002, 0.15000000000000002])
+                            .index(),
+                    ),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_exact_class_named_class_dist_ast() {
+        let result = parse("[\\d~Cat(1=0.7,2=0.3)]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+                    }),
+                    Some(
+                        Dist::Categorical(vec![
+                            0.0, 0.0, 0.7, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        ])
+                        .index(),
+                    ),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_exact_class_named_dot_ast() {
+        let result = parse("[ab~Cat(a=0.7,.=0.1)]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(vec!['a', 'b']),
+                    }),
+                    Some(Dist::Categorical(vec![0.1, 0.7, 0.20000000000000007]).index()),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_exact_class_named_class_dot_ast() {
+        let result = parse("[\\d~Cat(0=0.6,.=0.175)]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+                    }),
+                    Some(
+                        Dist::Categorical(vec![
+                            0.175,
+                            0.6,
+                            // remaining digits have 0.225 / 9 = 0.025
+                            0.02500000000000001,
+                            0.02500000000000001,
+                            0.02500000000000001,
+                            0.02500000000000001,
+                            0.02500000000000001,
+                            0.02500000000000001,
+                            0.02500000000000001,
+                            0.02500000000000001,
+                            0.02500000000000001,
+                        ])
+                        .index(),
+                    ),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_exact_class_named_dist_rest_zero_ast() {
+        let result = parse("^[\\d~Cat(1=0.9,.=0.1)]$").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 0,
+                kind: Kind::AnchorStart,
+            },
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+                    }),
+                    Some(
+                        Dist::Categorical(vec![
+                            0.1, 0.0, 0.9,
+                            // these are zero because 0.1 reserved for other than named params
+                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        ])
+                        .index(),
+                    ),
+                ),
+            },
+            AstNode {
+                length: 1,
+                kind: Kind::AnchorEnd,
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
     fn test_parser_short_class_ast() {
         let result = parse("\\d").unwrap_or_default();
         let expected = vec![
