@@ -127,16 +127,24 @@ pub fn evaluate_state(
                     }
                 }
             }
-            Kind::Class(_) => {
+            Kind::Class(ref match_c) => {
                 if is_epsilon {
                     return vec![Transition(Some(idx), p)];
                 }
 
-                let (_, p1) = match &state.dist {
-                    Some(dist) => dist.pmf_link(token, 0, &state.kind, false),
-                    None => (1., 1.),
-                };
-                return evaluate_state(state.outs.0, token, p * p1, nfa, counts, states, true);
+                if let Kind::Literal(c) = token {
+                    let idx = match match_c.iter().position(|&r| r == *c) {
+                        Some(i) => i as u64,
+                        None => return vec![],
+                    };
+                    let (_, p1) = match &state.dist {
+                        Some(dist) => dist.pmf_link(token, idx, &state.kind, false),
+                        None => (1., 1.),
+                    };
+
+                    return evaluate_state(state.outs.0, token, p * p1, nfa, counts, states, true);
+                }
+                return vec![];
             }
             _ => {}
         }

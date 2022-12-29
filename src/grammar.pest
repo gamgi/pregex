@@ -28,7 +28,7 @@ ExactQuantifier =  { QuantifierParam }
 QuantifierParam =  { ASCII_DIGIT* }
 
 Dist            =  { "~" ~ DistName ~ ( "(" ~ DistParams ~ ")" )? }
-DistName        =  { ^"Geo" | ^"Bin" | ^"Ber" | ^"Const" | ^"Zipf" }
+DistName        =  { ^"Bin" | ^"Ber" | ^"Cat" | ^"Const" | ^"Geo" | ^"Zipf" }
 DistParams      = _{ DistParam ~ ("," ~ DistParam)? }
 DistParam       = _{ IndexParam | NamedParam }
 IndexParam      =  { FLOAT_NUMBER }

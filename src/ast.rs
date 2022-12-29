@@ -139,6 +139,13 @@ pub fn build_ast_from_expr(pair: Pair<Rule>) -> AstNode {
                 None => None,
             };
             match class_dist {
+                Some(Dist::Categorical(_)) => AstNode {
+                    length: 1,
+                    kind: Kind::Classified(
+                        Box::new(left_ast),
+                        Some(DistLink::Indexed(class_dist.unwrap())),
+                    ),
+                },
                 Some(dist) => AstNode {
                     length: 1,
                     kind: Kind::Classified(Box::new(left_ast), Some(DistLink::Indexed(dist))),
