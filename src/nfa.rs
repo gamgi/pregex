@@ -694,7 +694,7 @@ mod test {
                                 length: 1,
                                 kind: Kind::Literal('b'),
                             }),
-                            Some(Dist::PGeometric(2, 0.5).count()),
+                            Some(Dist::PGeometric(2, u64::MAX, 0.5).count()),
                         ),
                     }),
                 ),
@@ -720,7 +720,7 @@ mod test {
             State::new(
                 Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
-                Some(Dist::PGeometric(2, 0.5).count()),
+                Some(Dist::PGeometric(2, u64::MAX, 0.5).count()),
             ),
         ];
         assert_eq!(result, expected);
@@ -762,7 +762,7 @@ mod test {
                         length: 1,
                         kind: Kind::Class(vec!['a', 'b', 'c']),
                     }),
-                    Some(Dist::PGeometric(0, 0.5).count()),
+                    Some(Dist::PGeometric(0, u64::MAX, 0.5).count()),
                 ),
             },
             0,
@@ -771,7 +771,7 @@ mod test {
         let expected = vec![State::new(
             Kind::Class(vec!['a', 'b', 'c']),
             (Some(1), None),
-            Some(Dist::PGeometric(0, 0.5).count()),
+            Some(Dist::PGeometric(0, u64::MAX, 0.5).count()),
         )];
         assert_eq!(result, expected);
     }

@@ -179,7 +179,7 @@ mod test {
                         length: 1,
                         kind: Kind::Literal('a'),
                     }),
-                    Some(Dist::PGeometric(2, 0.5).count()),
+                    Some(Dist::PGeometric(2, u64::MAX, 0.5).count()),
                 ),
             },
             AstNode {
@@ -217,7 +217,7 @@ mod test {
                         length: 1,
                         kind: Kind::Class(vec!['a', 'b', 'c']),
                     }),
-                    Some(Dist::PGeometric(0, 0.5).index()),
+                    Some(Dist::PGeometric(0, u64::MAX, 0.5).index()),
                 ),
             },
             AstNode {
