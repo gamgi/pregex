@@ -78,6 +78,7 @@ fn input_reader(config: &cli::Config) -> Result<BufReader<Box<dyn Read>>> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use approx::assert_relative_eq;
     use regex::match_likelihood;
 
     #[test]
@@ -99,6 +100,47 @@ mod test {
         assert_eq!(match_likelihood(&nfa, &"ab".to_string(), false), None);
         assert_eq!(match_likelihood(&nfa, &"abc".to_string(), false), Some(1.0));
         assert_eq!(match_likelihood(&nfa, &"abcd".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_quantifier_exact() {
+        let nfa = compile("^a{5~Geo(0.5)}$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"aaaa".to_string(), false), None);
+        assert_eq!(
+            match_likelihood(&nfa, &"aaaaa".to_string(), false),
+            Some(0.5)
+        );
+        assert_eq!(
+            match_likelihood(&nfa, &"aaaaaa".to_string(), false),
+            Some(0.25)
+        );
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_quantifier_zipf() {
+        let nfa = compile("^a{2~Zipf(1.0)}$").unwrap();
+        let harmonic_number_2 = 3. / 2.;
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some((1. / 2.) / harmonic_number_2));
+        assert_eq!(match_likelihood(&nfa, &"aa".to_string(), false), Some((1. / 3.) / harmonic_number_2));
+        assert_eq!(match_likelihood(&nfa, &"aaa".to_string(), false), Some((1. / 4.) / harmonic_number_2));
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_class_zipf() {
+        // n = 2, 1st is 2/3 and the 2nd is 1/3
+        let nfa = compile("^[ab~Zipf(1.0)]$").unwrap();
+        let harmonic_number_2 = 3. / 2.;
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some((1. / 1.) / harmonic_number_2));
+        assert_eq!(match_likelihood(&nfa, &"b".to_string(), false), Some((1. / 2.) / harmonic_number_2));
+
+        // n = 26, the canonical english alphabet case
+        let nfa = compile("^[etaoinshrdlcumwfgypbvkjxqz~Zipf(0.6)]$").unwrap();
+        let harmonic_number_26 = 34395742267. / 8923714800.;
+        assert_relative_eq!(match_likelihood(&nfa, &"e".to_string(), false).unwrap(), (1. / 2.) / harmonic_number_26, epsilon = 0.01);
+        assert_relative_eq!(match_likelihood(&nfa, &"t".to_string(), false).unwrap(), (1. / 3.) / harmonic_number_26, epsilon = 0.01);
     }
 
     #[test]

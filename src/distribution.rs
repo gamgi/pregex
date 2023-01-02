@@ -134,7 +134,10 @@ impl Dist {
             }
             "zipf" => {
                 let p: f64 = params.first().unwrap_or(&"1.0").parse().unwrap();
-                let n = c.expect("chars to be passed").len() as u64;
+                let n = match c {
+                    Some(c) => c.len() as u64,
+                    None => n,
+                };
                 Dist::PZipf(0, n, p)
             }
             _ => {
