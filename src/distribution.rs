@@ -44,24 +44,21 @@ impl Dist {
         }
     }
 
-    /// Distribution from quantifier kind and distribution params
+    /// Distribution from kind and distribution params
     ///
     /// Eg. complete_from(ExactQuantifier(2), Dist::Normal(sigma))
     /// would return a Normal distribution centered at 2.
-    pub fn complete_from(
-        quantifier_kind: &Kind,
-        quantifier_dist_pair: Pair<'_, crate::parser::Rule>,
-    ) -> Self {
-        let n = match quantifier_kind {
+    pub fn complete_from(kind: &Kind, dist_pair: Pair<'_, crate::parser::Rule>) -> Self {
+        let n = match kind {
             Kind::ExactQuantifier(n) => *n,
             _ => 0, // required n is zero
         };
-        let c = match quantifier_kind {
+        let c = match kind {
             Kind::Class(c) => Some(c),
             _ => None,
         };
 
-        let mut pair = quantifier_dist_pair.into_inner();
+        let mut pair = dist_pair.into_inner();
         let name = pair.next().unwrap().as_span().as_str().to_lowercase();
 
         // Parse parameters, that may be supplied in various formats
