@@ -219,9 +219,6 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist
             start: index,
             outs,
         },
-        _ => {
-            panic!("{} is not allowed in the AST", ast.kind.to_string());
-        }
     }
 }
 
