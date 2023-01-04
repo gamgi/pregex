@@ -248,9 +248,15 @@ impl Dist {
 }
 
 /// Calculates the probability mass function for the zipf distribution at `x`
-fn zipf(x: u64, s: f64, n_max: u64) -> f64 {
-    let normalizer: f64 = (1..(n_max + 1)).map(|n_i| 1.0 / (n_i as f64).powf(s)).sum();
-    (1.0 / (x as f64).powf(s)) / normalizer
+fn zipf(x: u64, a: f64, n: u64) -> f64 {
+    assert!(x > 0, "outside zipf distribution support");
+
+    let normalizer = generalized_harmonic_number(n, a);
+    (1.0 / (x as f64).powf(a)) / normalizer
+}
+
+fn generalized_harmonic_number(n: u64, m: f64) -> f64 {
+    (1..(n + 1)).map(|n_i| 1.0 / (n_i as f64).powf(m)).sum()
 }
 
 /// Link for mapping state parameters to distribution parameters
