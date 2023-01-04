@@ -155,7 +155,7 @@ impl Dist {
     }
 
     /// Test helper
-    pub fn evaluated(&self, x: u64, log: bool) -> (f64, f64) {
+    pub(crate) fn evaluated(&self, x: u64, log: bool) -> (f64, f64) {
         self.evaluate(Some(x), log)
     }
 
@@ -390,5 +390,29 @@ mod test {
         assert_eq!(Dist::PBernoulli(0, 1, 0.5).evaluated(0, false), (0.5, 0.5));
         assert_eq!(Dist::PBernoulli(0, 1, 0.5).evaluated(1, false), (0.5, 0.5));
         assert_eq!(Dist::PBernoulli(0, 2, 0.5).evaluated(2, false), (1.0, 0.0));
+    }
+
+    #[test]
+    fn test_distribution_categorical() {
+        let dist = Dist::Categorical(vec![0.5, 0.3, 0.2]);
+
+        assert_eq!(dist.evaluated(0, false), (0.5, 0.5));
+        assert_eq!(dist.evaluated(1, false), (0.7, 0.3));
+        assert_eq!(dist.evaluated(2, false), (0.8, 0.2));
+        assert_eq!(dist.evaluated(3, false), (1.0, 0.0));
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_distribution_zipf() {
+        // n_max = 1, the normalizing constant is 1
+        let dist = Dist::PZipf(0, 1, 1.0);
+        assert_eq!(dist.evaluated(1, false), (1. - (1. / 1.), (1. / 1.)));
+        assert_eq!(dist.evaluated(2, false), (1. - (1. / 2.), (1. / 2.)));
+
+        // n_max = 2, the normalizing constant is 3/2 = 1.5
+        let dist = Dist::PZipf(0, 2, 1.0);
+        assert_eq!(dist.evaluated(1, false), (1. - (1. / 1.) / 1.5, (1. / 1.) / 1.5));
+        assert_eq!(dist.evaluated(2, false), (1. - (1. / 2.) / 1.5, (1. / 2.) / 1.5));
     }
 }

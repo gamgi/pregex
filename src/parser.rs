@@ -539,5 +539,6 @@ mod test {
     #[test]
     fn test_parser_exact_class_with_dist() {
         assert_eq!(ast_as_str(parse("[ab~Const]").unwrap()), "[[ab]]");
+        assert_eq!(ast_as_str(parse("[ab~Geo(1.0)]").unwrap()), "[[ab]~Geo(1)]");
     }
 }
