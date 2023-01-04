@@ -38,10 +38,8 @@ impl fmt::Display for Kind {
                 true => write!(f, "[{}..]", c.iter().take(3).join("")),
                 false => write!(f, "[{}]", c.iter().join("")),
             },
-            Kind::Classified(l, d) => match d {
-                Some(d) => write!(f, "[{}{}]", l, d),
-                None => write!(f, "[{}]", l),
-            },
+            Kind::Classified(l, Some(d)) => write!(f, "[{}{}]", l, d),
+            Kind::Classified(l, None) => write!(f, "[{}]", l),
             Kind::Concatenation(l, r) => write!(f, "{}{}.", l, r),
             Kind::Quantified(r, l, Some(d)) => write!(f, "{}{{{}{}}}", l, r, d),
             Kind::Quantified(r, l, None) => match r.kind {
@@ -117,7 +115,7 @@ pub fn build_ast_from_expr(pair: Pair<Rule>) -> AstNode {
                 kind: Kind::Quantified(
                     Box::new(quantifier_ast),
                     Box::new(left_ast),
-                    quantifier_dist.map(|d| DistLink::Counted(d)),
+                    quantifier_dist.map(DistLink::Counted),
                 ),
             }
         }
@@ -173,8 +171,7 @@ pub fn build_ast_from_expr(pair: Pair<Rule>) -> AstNode {
         }
         Rule::ExactQuantifier => {
             let pair = pair.into_inner().next().unwrap();
-            // uses str::parse to convert to appropriate Rust type
-            let n: u64 = pair.as_str().parse().unwrap();
+            let n = pair.as_str().parse::<u64>().unwrap();
             AstNode {
                 length: 1,
                 kind: Kind::ExactQuantifier(n),

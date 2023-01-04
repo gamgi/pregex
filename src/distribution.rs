@@ -13,13 +13,13 @@ use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Dist {
-    Categorical(Vec<f64>), // p[]
-    Constant(f64),         // p
-    ExactlyTimes(u64),     // n_match
-    PGeometric(u64, f64),  // n_min, p
-    PBinomial(u64, f64),   // n_max, p
-    PBernoulli(u64, f64),  // n_max, p
-    PZipf(u64, f64),       // n_max, s
+    Categorical(Vec<f64>),     // p[]
+    Constant(f64),             // p
+    ExactlyTimes(u64),         // n_match
+    PGeometric(u64, u64, f64), // n_min, n_max, p
+    PBinomial(u64, u64, f64),  // n_min, n_max, p
+    PBernoulli(u64, u64, f64), // n_min, n_max, p
+    PZipf(u64, u64, f64),      // n_min, n_max, s
 }
 
 impl fmt::Display for Dist {
@@ -28,10 +28,10 @@ impl fmt::Display for Dist {
             Dist::Categorical(_) => write!(f, "~Cat"),
             Dist::Constant(_) => write!(f, ""),
             Dist::ExactlyTimes(n) => write!(f, ""),
-            Dist::PGeometric(_, p) => write!(f, "~Geo({})", p),
-            Dist::PBinomial(_, p) => write!(f, "~Bin({})", p),
-            Dist::PBernoulli(_, p) => write!(f, "~Ber({})", p),
-            Dist::PZipf(_, p) => write!(f, "~Zipf({})", p),
+            Dist::PGeometric(_, _, p) => write!(f, "~Geo({})", p),
+            Dist::PBinomial(_, _, p) => write!(f, "~Bin({})", p),
+            Dist::PBernoulli(_, _, p) => write!(f, "~Ber({})", p),
+            Dist::PZipf(_, _, p) => write!(f, "~Zipf({})", p),
         }
     }
 }
@@ -44,24 +44,21 @@ impl Dist {
         }
     }
 
-    /// Distribution from quantifier kind and distribution params
+    /// Distribution from kind and distribution params
     ///
     /// Eg. complete_from(ExactQuantifier(2), Dist::Normal(sigma))
     /// would return a Normal distribution centered at 2.
-    pub fn complete_from(
-        quantifier_kind: &Kind,
-        quantifier_dist_pair: Pair<'_, crate::parser::Rule>,
-    ) -> Self {
-        let n = match quantifier_kind {
+    pub fn complete_from(kind: &Kind, dist_pair: Pair<'_, crate::parser::Rule>) -> Self {
+        let n = match kind {
             Kind::ExactQuantifier(n) => *n,
             _ => 0, // required n is zero
         };
-        let c = match quantifier_kind {
+        let c = match kind {
             Kind::Class(c) => Some(c),
             _ => None,
         };
 
-        let mut pair = quantifier_dist_pair.into_inner();
+        let mut pair = dist_pair.into_inner();
         let name = pair.next().unwrap().as_span().as_str().to_lowercase();
 
         // Parse parameters, that may be supplied in various formats
@@ -89,15 +86,23 @@ impl Dist {
             }
             "geo" => {
                 let p: f64 = params.first().unwrap_or(&"0.5").parse().unwrap();
-                Dist::PGeometric(n, p)
-            }
-            "bin" => {
-                let p: f64 = params.first().unwrap_or(&"1.0").parse().unwrap();
-                Dist::PBinomial(n, p)
+                Dist::PGeometric(n, u64::MAX, p)
             }
             "ber" => {
                 let p: f64 = params.first().unwrap_or(&"1.0").parse().unwrap();
-                Dist::PBernoulli(n, p)
+                Dist::PBernoulli(0, 2, p)
+            }
+            "bin" => {
+                let p = params.first().unwrap_or(&"1.0").parse::<f64>().unwrap();
+                let n = match c {
+                    Some(c) => match c.len() {
+                        0 => 0,
+                        // binomial distribution has support for x >= 0
+                        n => (n - 1) as u64,
+                    },
+                    None => n,
+                };
+                Dist::PBinomial(0, n, p)
             }
             "cat" => {
                 let params_named: HashMap<char, f64> = params_named
@@ -134,8 +139,11 @@ impl Dist {
             }
             "zipf" => {
                 let p: f64 = params.first().unwrap_or(&"1.0").parse().unwrap();
-                let n = c.expect("chars to be passed").len() as u64;
-                Dist::PZipf(n, p)
+                let n = match c {
+                    Some(c) => c.len() as u64,
+                    None => n,
+                };
+                Dist::PZipf(0, n, p)
             }
             _ => {
                 panic!("Unknown distribution {}", name)
@@ -144,7 +152,7 @@ impl Dist {
     }
 
     /// Test helper
-    pub fn evaluated(&self, x: u64, log: bool) -> (f64, f64) {
+    pub(crate) fn evaluated(&self, x: u64, log: bool) -> (f64, f64) {
         self.evaluate(Some(x), log)
     }
 
@@ -173,7 +181,7 @@ impl Dist {
 
         // Evaluate point mass function from distribution
         let p = match self {
-            Dist::PGeometric(n_min, c) => {
+            Dist::PGeometric(n_min, _, c) => {
                 let n = x.unwrap();
                 if n < *n_min {
                     return (1.0, 0.0);
@@ -184,7 +192,7 @@ impl Dist {
                     false => Geometric::new(*c).unwrap().pmf(x),
                 }
             }
-            Dist::PBinomial(n_max, p) => {
+            Dist::PBinomial(_, n_max, p) => {
                 let n = x.unwrap();
                 if n > *n_max {
                     return (0.0, 0.0);
@@ -195,7 +203,7 @@ impl Dist {
                     false => Binomial::new(*p, *n_max).unwrap().pmf(x),
                 }
             }
-            Dist::PBernoulli(n_max, p) => {
+            Dist::PBernoulli(_, n_max, p) => {
                 let n = x.unwrap();
                 if n > *n_max {
                     return (1.0, 0.0);
@@ -206,14 +214,14 @@ impl Dist {
                     false => Bernoulli::new(*p).unwrap().pmf(x),
                 }
             }
-            Dist::PZipf(n_max, s) => {
+            Dist::PZipf(_, n_max, s) => {
                 let n = x.unwrap();
-                let p = zipf(n + 1, *s, *n_max);
+                let p = zipf(n, *s, *n_max);
                 return (1. - p, p);
             }
             Dist::Categorical(prob_mass) => {
-                // Offset match by one since zeroth index is p_rest
-                let x = x.map(|i| i + 1).unwrap_or(0);
+                // Zeroth index is p_rest
+                let x = x.unwrap_or(0);
                 let p = match log {
                     true => Categorical::new(prob_mass).unwrap().ln_pmf(x),
                     false => Categorical::new(prob_mass).unwrap().pmf(x),
@@ -240,9 +248,15 @@ impl Dist {
 }
 
 /// Calculates the probability mass function for the zipf distribution at `x`
-fn zipf(x: u64, s: f64, n_max: u64) -> f64 {
-    let normalizer: f64 = (1..(n_max + 1)).map(|n_i| 1.0 / (n_i as f64).powf(s)).sum();
-    (1.0 / (x as f64).powf(s)) / normalizer
+fn zipf(x: u64, a: f64, n: u64) -> f64 {
+    assert!(x > 0, "outside zipf distribution support");
+
+    let normalizer = generalized_harmonic_number(n, a);
+    (1.0 / (x as f64).powf(a)) / normalizer
+}
+
+fn generalized_harmonic_number(n: u64, m: f64) -> f64 {
+    (1..(n + 1)).map(|n_i| 1.0 / (n_i as f64).powf(m)).sum()
 }
 
 /// Link for mapping state parameters to distribution parameters
@@ -272,7 +286,12 @@ impl DistLink {
                 match kind {
                     Kind::Class(chars) => match chars.iter().position(|&r| r == *c) {
                         // match, evaluate for p
-                        Some(idx) => d.evaluate(Some(idx as u64), log),
+                        Some(idx) => match d {
+                            // zipf distribution has support for x >= 1
+                            Dist::PZipf(_, _, _) => d.evaluate(Some(idx as u64 + 1), log),
+                            Dist::Categorical(_) => d.evaluate(Some(idx as u64 + 1), log),
+                            _ => d.evaluate(Some(idx as u64), log),
+                        },
                         // no match, evaluate for p_rest
                         None => d.evaluate(None, log),
                     },
@@ -326,51 +345,77 @@ mod test {
     #[test]
     #[rustfmt::skip]
     fn test_distribution_geometric_1_or_more() {
-        assert_eq!(Dist::PGeometric(1, 0.5).evaluated( 0, false), (1.0, 0.0));
-        assert_eq!(Dist::PGeometric(1, 0.5).evaluated( 1, false), (0.5, 0.5));
-        assert_eq!(Dist::PGeometric(1, 0.5).evaluated( 2, false), (0.75, 0.25));
+        assert_eq!(Dist::PGeometric(1, u64::MAX, 0.5).evaluated( 0, false), (1.0, 0.0));
+        assert_eq!(Dist::PGeometric(1, u64::MAX, 0.5).evaluated( 1, false), (0.5, 0.5));
+        assert_eq!(Dist::PGeometric(1, u64::MAX, 0.5).evaluated( 2, false), (0.75, 0.25));
     }
 
     #[test]
+    #[rustfmt::skip]
     fn test_distribution_geometric_2_or_more() {
-        assert_eq!(Dist::PGeometric(2, 0.5).evaluated(0, false), (1.0, 0.0));
-        assert_eq!(Dist::PGeometric(2, 0.5).evaluated(1, false), (1.0, 0.0));
-        assert_eq!(Dist::PGeometric(2, 0.5).evaluated(2, false), (0.5, 0.5));
+        assert_eq!(Dist::PGeometric(2, u64::MAX, 0.5).evaluated(0, false), (1.0, 0.0));
+        assert_eq!(Dist::PGeometric(2, u64::MAX, 0.5).evaluated(1, false), (1.0, 0.0));
+        assert_eq!(Dist::PGeometric(2, u64::MAX, 0.5).evaluated(2, false), (0.5, 0.5));
     }
 
     #[test]
     fn test_distribution_binomial_degenerate() {
         // p = 0, the distribution is concentrated at 0
-        assert_eq!(Dist::PBinomial(0, 1.0).evaluated(0, false), (0.0, 1.0));
-        assert_eq!(Dist::PBinomial(0, 1.0).evaluated(1, false), (0.0, 0.0));
-        assert_eq!(Dist::PBinomial(0, 1.0).evaluated(2, false), (0.0, 0.0));
+        assert_eq!(Dist::PBinomial(0, 0, 0.0).evaluated(0, false), (0.0, 1.0));
+        assert_eq!(Dist::PBinomial(0, 0, 0.0).evaluated(1, false), (0.0, 0.0));
+        assert_eq!(Dist::PBinomial(0, 0, 0.0).evaluated(2, false), (0.0, 0.0));
+        assert_eq!(Dist::PBinomial(0, 0, 0.0).evaluated(5, false), (0.0, 0.0));
 
         // p = 1, the distribution is concentrated at n
-        assert_eq!(Dist::PBinomial(1, 1.0).evaluated(1, false), (0.0, 1.0));
-        assert_eq!(Dist::PBinomial(1, 1.0).evaluated(2, false), (0.0, 0.0));
-        assert_eq!(Dist::PBinomial(5, 1.0).evaluated(5, false), (0.0, 1.0));
+        assert_eq!(Dist::PBinomial(0, 1, 1.0).evaluated(1, false), (0.0, 1.0));
+        assert_eq!(Dist::PBinomial(0, 1, 1.0).evaluated(2, false), (0.0, 0.0));
+        assert_eq!(Dist::PBinomial(0, 5, 1.0).evaluated(5, false), (0.0, 1.0));
     }
 
     #[test]
     fn test_distribution_binomial_up_to_1() {
-        assert_eq!(Dist::PBinomial(1, 0.5).evaluated(0, false), (0.5, 0.5));
-        assert_eq!(Dist::PBinomial(1, 0.5).evaluated(1, false), (0.5, 0.5));
-        assert_eq!(Dist::PBinomial(1, 0.5).evaluated(2, false), (0.0, 0.0));
+        assert_eq!(Dist::PBinomial(0, 1, 0.5).evaluated(0, false), (0.5, 0.5));
+        assert_eq!(Dist::PBinomial(0, 1, 0.5).evaluated(1, false), (0.5, 0.5));
+        assert_eq!(Dist::PBinomial(0, 1, 0.5).evaluated(2, false), (0.0, 0.0));
     }
 
     #[test]
     fn test_distribution_binomial_up_to_2() {
         use Dist::PBinomial;
-        assert_eq!(PBinomial(2, 0.5).evaluated(0, false), (0.75, 0.25));
-        assert_eq!(PBinomial(2, 0.5).evaluated(1, false), (0.5, 0.5));
-        assert_eq!(PBinomial(2, 0.5).evaluated(2, false), (0.75, 0.25));
-        assert_eq!(PBinomial(2, 0.5).evaluated(3, false), (0.0, 0.0));
+        assert_eq!(PBinomial(0, 2, 0.5).evaluated(0, false), (0.75, 0.25));
+        assert_eq!(PBinomial(0, 2, 0.5).evaluated(1, false), (0.5, 0.5));
+        assert_eq!(PBinomial(0, 2, 0.5).evaluated(2, false), (0.75, 0.25));
+        assert_eq!(PBinomial(0, 2, 0.5).evaluated(3, false), (0.0, 0.0));
     }
 
     #[test]
     fn test_distribution_bernoulli() {
-        assert_eq!(Dist::PBernoulli(1, 0.5).evaluated(0, false), (0.5, 0.5));
-        assert_eq!(Dist::PBernoulli(1, 0.5).evaluated(1, false), (0.5, 0.5));
-        assert_eq!(Dist::PBernoulli(2, 0.5).evaluated(2, false), (1.0, 0.0));
+        assert_eq!(Dist::PBernoulli(0, 1, 0.5).evaluated(0, false), (0.5, 0.5));
+        assert_eq!(Dist::PBernoulli(0, 1, 0.5).evaluated(1, false), (0.5, 0.5));
+        assert_eq!(Dist::PBernoulli(0, 2, 0.5).evaluated(2, false), (1.0, 0.0));
+    }
+
+    #[test]
+    fn test_distribution_categorical() {
+        let dist = Dist::Categorical(vec![0.5, 0.3, 0.2]);
+
+        assert_eq!(dist.evaluated(0, false), (0.5, 0.5));
+        assert_eq!(dist.evaluated(1, false), (0.7, 0.3));
+        assert_eq!(dist.evaluated(2, false), (0.8, 0.2));
+        assert_eq!(dist.evaluated(3, false), (1.0, 0.0));
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_distribution_zipf() {
+        // n_max = 1, the normalizing constant is 1
+        let dist = Dist::PZipf(0, 1, 1.0);
+        assert_eq!(dist.evaluated(1, false), (1. - (1. / 1.), (1. / 1.)));
+        assert_eq!(dist.evaluated(2, false), (1. - (1. / 2.), (1. / 2.)));
+
+        // n_max = 2, the normalizing constant is 3/2 = 1.5
+        let dist = Dist::PZipf(0, 2, 1.0);
+        assert_eq!(dist.evaluated(1, false), (1. - (1. / 1.) / 1.5, (1. / 1.) / 1.5));
+        assert_eq!(dist.evaluated(2, false), (1. - (1. / 2.) / 1.5, (1. / 2.) / 1.5));
     }
 }

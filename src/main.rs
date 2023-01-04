@@ -78,6 +78,7 @@ fn input_reader(config: &cli::Config) -> Result<BufReader<Box<dyn Read>>> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use approx::assert_relative_eq;
     use regex::match_likelihood;
 
     #[test]
@@ -99,6 +100,62 @@ mod test {
         assert_eq!(match_likelihood(&nfa, &"ab".to_string(), false), None);
         assert_eq!(match_likelihood(&nfa, &"abc".to_string(), false), Some(1.0));
         assert_eq!(match_likelihood(&nfa, &"abcd".to_string(), false), None);
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_quantifier_exact() {
+        let nfa = compile("^a{5~Geo(0.5)}$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"aaaa".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"aaaaa".to_string(), false), Some(0.5));
+        assert_eq!(match_likelihood(&nfa, &"aaaaaa".to_string(), false), Some(0.25));
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_quantifier_zipf() {
+        let nfa = compile("^a{2~Zipf(1.0)}$").unwrap();
+        let harmonic_number_2 = 3. / 2.;
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some((1. / 1.) / harmonic_number_2));
+        assert_eq!(match_likelihood(&nfa, &"aa".to_string(), false), Some((1. / 2.) / harmonic_number_2));
+        assert_eq!(match_likelihood(&nfa, &"aaa".to_string(), false), Some((1. / 3.) / harmonic_number_2));
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_class_zipf() {
+        // n = 2, 1st is 2/3 and the 2nd is 1/3
+        // s = 1.0, normalizer is the (non-generalized) harmonic number
+        let nfa = compile("^[ab~Zipf(1.0)]$").unwrap();
+        let harmonic_number_2 = 3. / 2.;
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some((1. / 1.) / harmonic_number_2));
+        assert_eq!(match_likelihood(&nfa, &"b".to_string(), false), Some((1. / 2.) / harmonic_number_2));
+        assert_eq!(match_likelihood(&nfa, &"c".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_class_geo() {
+        let nfa = compile("^[abc~Geo(0.5)]$").unwrap();
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some(0.5));
+        assert_eq!(match_likelihood(&nfa, &"b".to_string(), false), Some(0.25));
+        assert_eq!(match_likelihood(&nfa, &"c".to_string(), false), Some(0.125));
+    }
+
+    #[test]
+    fn test_class_ber() {
+        let nfa = compile("^[abc~Ber(0.5)]$").unwrap();
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some(0.5));
+        assert_eq!(match_likelihood(&nfa, &"b".to_string(), false), Some(0.5));
+        assert_eq!(match_likelihood(&nfa, &"c".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_class_bin() {
+        let nfa = compile("^[abc~Bin(0.5)]$").unwrap();
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some(0.25));
+        assert_eq!(match_likelihood(&nfa, &"b".to_string(), false), Some(0.5));
+        assert_eq!(match_likelihood(&nfa, &"c".to_string(), false), Some(0.25));
     }
 
     #[test]

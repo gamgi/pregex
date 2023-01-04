@@ -174,7 +174,7 @@ mod test {
             State::new(
                 Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
-                Some(Dist::PGeometric(2, 0.5).count()),
+                Some(Dist::PGeometric(2, u64::MAX, 0.5).count()),
             ),
             State::literal('b', (Some(4), None)),
             State::terminal(),

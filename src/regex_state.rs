@@ -307,7 +307,7 @@ mod test {
             State::new(
                 Kind::ExactQuantifier(2),
                 (Some(1), Some(3)),
-                Some(DistLink::Counted(Dist::PGeometric(2, 0.5))),
+                Some(DistLink::Counted(Dist::PGeometric(2, u64::MAX, 0.5))),
             ),
             State::literal('b', (Some(4), None)),
             State::terminal(),
@@ -361,7 +361,7 @@ mod test {
             State::new(
                 Kind::Class(vec!['a', 'b', 'c']),
                 (Some(2), None),
-                Some(DistLink::Indexed(Dist::PGeometric(0, 0.5))),
+                Some(DistLink::Indexed(Dist::PGeometric(0, u64::MAX, 0.5))),
             ),
             State::terminal(),
         ];
