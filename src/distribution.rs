@@ -91,13 +91,21 @@ impl Dist {
                 let p: f64 = params.first().unwrap_or(&"0.5").parse().unwrap();
                 Dist::PGeometric(n, u64::MAX, p)
             }
-            "bin" => {
-                let p: f64 = params.first().unwrap_or(&"1.0").parse().unwrap();
-                Dist::PBinomial(0, n, p)
-            }
             "ber" => {
                 let p: f64 = params.first().unwrap_or(&"1.0").parse().unwrap();
-                Dist::PBernoulli(0, n, p)
+                Dist::PBernoulli(0, 2, p)
+            }
+            "bin" => {
+                let p = params.first().unwrap_or(&"1.0").parse::<f64>().unwrap();
+                let n = match c {
+                    Some(c) => match c.len() {
+                        0 => 0,
+                        // binomial distribution has support for x >= 0
+                        n => (n - 1) as u64,
+                    },
+                    None => n,
+                };
+                Dist::PBinomial(0, n, p)
             }
             "cat" => {
                 let params_named: HashMap<char, f64> = params_named
@@ -211,12 +219,12 @@ impl Dist {
             }
             Dist::PZipf(_, n_max, s) => {
                 let n = x.unwrap();
-                let p = zipf(n + 1, *s, *n_max);
+                let p = zipf(n, *s, *n_max);
                 return (1. - p, p);
             }
             Dist::Categorical(prob_mass) => {
-                // Offset match by one since zeroth index is p_rest
-                let x = x.map(|i| i + 1).unwrap_or(0);
+                // Zeroth index is p_rest
+                let x = x.unwrap_or(0);
                 let p = match log {
                     true => Categorical::new(prob_mass).unwrap().ln_pmf(x),
                     false => Categorical::new(prob_mass).unwrap().pmf(x),
@@ -275,7 +283,12 @@ impl DistLink {
                 match kind {
                     Kind::Class(chars) => match chars.iter().position(|&r| r == *c) {
                         // match, evaluate for p
-                        Some(idx) => d.evaluate(Some(idx as u64), log),
+                        Some(idx) => match d {
+                            // zipf distribution has support for x >= 1
+                            Dist::PZipf(_, _, _) => d.evaluate(Some(idx as u64 + 1), log),
+                            Dist::Categorical(_) => d.evaluate(Some(idx as u64 + 1), log),
+                            _ => d.evaluate(Some(idx as u64), log),
+                        },
                         // no match, evaluate for p_rest
                         None => d.evaluate(None, log),
                     },
@@ -329,8 +342,8 @@ mod test {
     #[test]
     #[rustfmt::skip]
     fn test_distribution_geometric_1_or_more() {
-        assert_eq!(Dist::PGeometric(1,u64::MAX,  0.5).evaluated( 0, false), (1.0, 0.0));
-        assert_eq!(Dist::PGeometric(1,u64::MAX,  0.5).evaluated( 1, false), (0.5, 0.5));
+        assert_eq!(Dist::PGeometric(1, u64::MAX, 0.5).evaluated( 0, false), (1.0, 0.0));
+        assert_eq!(Dist::PGeometric(1, u64::MAX, 0.5).evaluated( 1, false), (0.5, 0.5));
         assert_eq!(Dist::PGeometric(1, u64::MAX, 0.5).evaluated( 2, false), (0.75, 0.25));
     }
 
@@ -348,6 +361,7 @@ mod test {
         assert_eq!(Dist::PBinomial(0, 0, 0.0).evaluated(0, false), (0.0, 1.0));
         assert_eq!(Dist::PBinomial(0, 0, 0.0).evaluated(1, false), (0.0, 0.0));
         assert_eq!(Dist::PBinomial(0, 0, 0.0).evaluated(2, false), (0.0, 0.0));
+        assert_eq!(Dist::PBinomial(0, 0, 0.0).evaluated(5, false), (0.0, 0.0));
 
         // p = 1, the distribution is concentrated at n
         assert_eq!(Dist::PBinomial(0, 1, 1.0).evaluated(1, false), (0.0, 1.0));
