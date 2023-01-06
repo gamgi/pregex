@@ -486,7 +486,7 @@ mod test {
     }
 
     #[test]
-    fn test_compile_star() {
+    fn test_compile_quantifier_star() {
         let result = ast_to_nfa(
             AstNode {
                 length: 3,
@@ -529,7 +529,7 @@ mod test {
     }
 
     #[test]
-    fn test_compile_plus() {
+    fn test_compile_quantifier_plus() {
         let result = ast_to_nfa(
             AstNode {
                 length: 3,
@@ -572,7 +572,7 @@ mod test {
     }
 
     #[test]
-    fn test_compile_exact_quantifier() {
+    fn test_compile_quantifier_exact() {
         let result = ast_to_nfa(
             AstNode {
                 length: 3,
@@ -613,7 +613,7 @@ mod test {
     }
 
     #[test]
-    fn test_compile_exact_quantifier_dist() {
+    fn test_compile_quantifier_exact_dist() {
         let result = ast_to_nfa(
             AstNode {
                 length: 3,

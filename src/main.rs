@@ -33,9 +33,7 @@ fn main() -> Result<()> {
 
     for line in reader.lines() {
         match line {
-            // TODO move debug visualize here, and use match_likelihood_stats or soething to get state out?
             Ok(input) => match regex::match_likelihood(&nfa, &input, config.visualize) {
-                // Some(p) => println!("{:.5}\t{}", p, input),
                 Some(p) => println!("{:.5}\t{}", p, input),
                 None => {}
             },
@@ -104,7 +102,7 @@ mod test {
 
     #[test]
     #[rustfmt::skip]
-    fn test_quantifier_exact() {
+    fn test_quantifier_geo() {
         let nfa = compile("^a{5~Geo(0.5)}$").unwrap();
 
         assert_eq!(match_likelihood(&nfa, &"aaaa".to_string(), false), None);
