@@ -91,6 +91,7 @@ pub fn evaluate_state(
                 return evaluate_state_outs(state.outs, token, p, nfa, counts, states, true);
             }
             Kind::Quantifier(_) | Kind::ExactQuantifier(_) => {
+                // NOTE: !
                 if !is_epsilon {
                     // Direct evaluation is no-op, since state used for counting only
                     return vec![];

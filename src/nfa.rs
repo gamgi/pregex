@@ -921,6 +921,25 @@ mod test {
 
     #[test]
     fn test_asts_to_nfa_start_node_special_case_2() {
+        let asts = parse("ab{0}c").unwrap();
+        let result = asts_to_nfa(asts);
+        let expected = vec![
+            State::start(Some(1)),
+            State::literal('a', (Some(2), None)),
+            State {
+                kind: Kind::ExactQuantifier(0),
+                outs: (Some(3), Some(4)),
+                dist: Some(Dist::ExactlyTimes(0).count()),
+            },
+            State::literal('b', (Some(2), None)),
+            State::literal('c', (Some(5), None)),
+            State::terminal(),
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_asts_to_nfa_start_node_special_case_3() {
         let asts = parse("a?b").unwrap();
         let result = asts_to_nfa(asts);
         let expected = vec![
@@ -940,7 +959,7 @@ mod test {
     }
 
     #[test]
-    fn test_nfas_to_ast_start_node_special_case_3() {
+    fn test_nfas_to_ast_start_node_special_case_4() {
         let asts = parse("a{2}b").unwrap();
         let result = asts_to_nfa(asts);
         let expected = vec![

@@ -191,6 +191,33 @@ mod test {
     }
 
     #[test]
+    fn test_parser_exact_zero_quantifier_dist_ast() {
+        let result = parse("a{0~Const}").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 2,
+                kind: Kind::Quantified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::ExactQuantifier(0),
+                    }),
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Literal('a'),
+                    }),
+                    // TODO maybe have n?min and n?max here
+                    Some(Dist::Constant(0, 0, 1.0).count()),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
     fn test_parser_exact_class_ast() {
         let result = parse("[abc]").unwrap_or_default();
         let expected = vec![

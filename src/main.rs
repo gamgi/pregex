@@ -101,6 +101,29 @@ mod test {
     }
 
     #[test]
+    fn test_quantifier_zero() {
+        let nfa = compile("^ab{0}$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"ab".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"aa".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_quantifier_zero_constant() {
+        let nfa = compile("^ab{0~Const(0.5)}$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some(0.5));
+        assert_eq!(match_likelihood(&nfa, &"ab".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"aa".to_string(), false), None);
+
+        let nfa = compile("^a\\d{0~Const(0.5)}$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some(0.5));
+        assert_eq!(match_likelihood(&nfa, &"a0".to_string(), false), None);
+    }
+
+    #[test]
     #[rustfmt::skip]
     fn test_quantifier_geo() {
         let nfa = compile("^a{5~Geo(0.5)}$").unwrap();
