@@ -453,7 +453,7 @@ mod test {
                         kind: Kind::Literal('a'),
                     }),
                     Box::new(AstNode {
-                        length: 1,
+                        length: 2,
                         kind: Kind::Quantified(
                             Box::new(AstNode {
                                 length: 1,
@@ -496,7 +496,7 @@ mod test {
                         kind: Kind::Literal('a'),
                     }),
                     Box::new(AstNode {
-                        length: 1,
+                        length: 2,
                         kind: Kind::Quantified(
                             Box::new(AstNode {
                                 length: 1,
@@ -539,7 +539,7 @@ mod test {
                         kind: Kind::Literal('a'),
                     }),
                     Box::new(AstNode {
-                        length: 1,
+                        length: 2,
                         kind: Kind::Quantified(
                             Box::new(AstNode {
                                 length: 1,
@@ -582,7 +582,7 @@ mod test {
                         kind: Kind::Literal('a'),
                     }),
                     Box::new(AstNode {
-                        length: 1,
+                        length: 2,
                         kind: Kind::Quantified(
                             Box::new(AstNode {
                                 length: 1,
@@ -623,7 +623,7 @@ mod test {
                         kind: Kind::Literal('a'),
                     }),
                     Box::new(AstNode {
-                        length: 1,
+                        length: 2,
                         kind: Kind::Quantified(
                             Box::new(AstNode {
                                 length: 1,
@@ -778,7 +778,7 @@ mod test {
                     kind: Kind::Literal('a'),
                 }),
                 Box::new(AstNode {
-                    length: 1,
+                    length: 2,
                     kind: Kind::Quantified(
                         Box::new(AstNode {
                             length: 1,
