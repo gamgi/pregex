@@ -14,7 +14,7 @@ use std::fmt;
 #[derive(Debug, PartialEq, Clone)]
 pub enum Dist {
     Categorical(Vec<f64>),     // p[]
-    Constant(f64),             // p
+    Constant(u64, u64, f64),   // n_min, n_max, p
     ExactlyTimes(u64),         // n_match
     PGeometric(u64, u64, f64), // n_min, n_max, p
     PBinomial(u64, u64, f64),  // n_min, n_max, p
@@ -26,8 +26,8 @@ impl fmt::Display for Dist {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Dist::Categorical(_) => write!(f, "~Cat"),
-            Dist::Constant(_) => write!(f, ""),
-            Dist::ExactlyTimes(n) => write!(f, ""),
+            Dist::Constant(_, _, _) => write!(f, ""),
+            Dist::ExactlyTimes(_) => write!(f, ""),
             Dist::PGeometric(_, _, p) => write!(f, "~Geo({})", p),
             Dist::PBinomial(_, _, p) => write!(f, "~Bin({})", p),
             Dist::PBernoulli(_, _, p) => write!(f, "~Ber({})", p),
@@ -82,7 +82,7 @@ impl Dist {
         match name.as_str() {
             "const" => {
                 let p: f64 = params.first().unwrap_or(&"1.0").parse().unwrap();
-                Dist::Constant(p)
+                Dist::Constant(n, n, p)
             }
             "geo" => {
                 let p: f64 = params.first().unwrap_or(&"0.5").parse().unwrap();
@@ -160,10 +160,16 @@ impl Dist {
     pub fn evaluate(&self, x: Option<u64>, log: bool) -> (f64, f64) {
         // Special distributions
         match self {
-            Dist::Constant(p) => match log {
-                true => return (p.ln(), p.ln()),
-                false => return (*p, *p),
-            },
+            Dist::Constant(n_min, n_max, p) => {
+                let n = x.unwrap();
+                return match n >= *n_min && n <= *n_max {
+                    true => match log {
+                        true => return (p.ln(), p.ln()),
+                        false => return (*p, *p),
+                    },
+                    false => (0.0, 0.0),
+                };
+            }
             #[allow(clippy::comparison_chain)]
             Dist::ExactlyTimes(n_match) => {
                 let n = x.unwrap();
@@ -324,14 +330,17 @@ mod test {
 
     #[test]
     fn test_distribution_constant() {
-        assert_eq!(Dist::Constant(1.0).evaluated(1, false), (1.0, 1.0));
-        assert_eq!(Dist::Constant(0.5).evaluated(1, false), (0.5, 0.5));
+        assert_eq!(Dist::Constant(0, 1, 1.0).evaluated(1, false), (1.0, 1.0));
+        assert_eq!(Dist::Constant(0, 1, 0.5).evaluated(1, false), (0.5, 0.5));
+        assert_eq!(Dist::Constant(0, 1, 0.5).evaluated(2, false), (0.0, 0.0));
     }
 
     #[test]
+    #[rustfmt::skip]
     fn test_distribution_constant_log() {
-        assert_tuple_nearly_eq(Dist::Constant(1.0).evaluated(1, true), (0., 0.), 0.01);
-        assert_tuple_nearly_eq(Dist::Constant(0.5).evaluated(1, true), (-0.69, -0.69), 0.01);
+        assert_tuple_nearly_eq(Dist::Constant(0, 1, 1.0).evaluated(1, true), (0., 0.), 0.01);
+        assert_tuple_nearly_eq(Dist::Constant(0, 1, 0.5).evaluated(1, true), (-0.69, -0.69), 0.01);
+        assert_tuple_nearly_eq(Dist::Constant(0, 1, 0.5).evaluated(2, true), (0., 0.), 0.01);
     }
 
     #[test]
