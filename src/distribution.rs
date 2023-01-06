@@ -254,8 +254,12 @@ impl Dist {
 }
 
 /// Calculates the probability mass function for the zipf distribution at `x`
+// The Zipf distribution reduces to the Zeta distribution as n -> inf
 fn zipf(x: u64, a: f64, n: u64) -> f64 {
-    assert!(x > 0, "outside zipf distribution support");
+    // Support zero for consistency
+    if x == 0 {
+        return 0.0;
+    }
 
     let normalizer = generalized_harmonic_number(n, a);
     (1.0 / (x as f64).powf(a)) / normalizer
