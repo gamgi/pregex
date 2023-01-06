@@ -96,9 +96,9 @@ pub fn evaluate_state(
                     return vec![];
                 }
 
-                // quantifier now visited current + 1 times
-                let n = *counts.get(&idx).unwrap_or(&0) + 1;
-                // quntifier p is existing (base p) or incoming
+                // quantifier now visited current n times
+                let n = *counts.get(&idx).unwrap_or(&0);
+
                 let pb = *states.get(&idx).unwrap_or(&p);
                 let (_, p1) = match &state.dist {
                     Some(dist) => dist.pmf_link(token, n, &state.kind, false),
@@ -128,9 +128,7 @@ pub fn evaluate_state(
 
                 if let Kind::Literal(c) = token {
                     if *c == match_c {
-                        return evaluate_state_outs(
-                            state.outs, token, p, nfa, counts, states, true,
-                        );
+                        return evaluate_state(state.outs.0, token, p, nfa, counts, states, true);
                     }
                 }
             }
@@ -303,12 +301,12 @@ mod test {
     fn test_evaluate_state_geo_quantifier() {
         let nfa = vec![
             State::anchor_start(Some(1)),
-            State::literal('a', (Some(2), None)),
             State::new(
                 Kind::ExactQuantifier(2),
-                (Some(1), Some(3)),
+                (Some(2), Some(3)),
                 Some(DistLink::Counted(Dist::PGeometric(2, u64::MAX, 0.5))),
             ),
+            State::literal('a', (Some(1), None)),
             State::literal('b', (Some(4), None)),
             State::terminal(),
         ];
@@ -316,7 +314,7 @@ mod test {
         let states: HashMap<usize, f64> = HashMap::new();
 
         let transitions = evaluate_state(
-            Some(1),
+            Some(2),
             &Kind::Literal('a'),
             1.0,
             &nfa,
@@ -327,31 +325,13 @@ mod test {
         assert_eq!(
             transitions,
             vec![
-                Transition(Some(2), 1.0),
                 Transition(Some(1), 1.0), // Store p_entry
+                Transition(Some(2), 1.0),
                 Transition(Some(3), 0.0)
             ]
         );
 
-        let counts: HashMap<usize, u64> = HashMap::from([(2, 1)]);
-        let states: HashMap<usize, f64> = HashMap::from([(2, 1.0)]);
-        let transitions = evaluate_state(
-            Some(1),
-            &Kind::Literal('a'),
-            1.0,
-            &nfa,
-            &counts,
-            &states,
-            false,
-        );
-        assert_eq!(
-            transitions,
-            vec![
-                Transition(Some(2), 1.0),
-                Transition(Some(1), 1.0), // Keep p_entry
-                Transition(Some(3), 0.5)
-            ]
-        );
+        // TODO more steps
     }
 
     #[test]

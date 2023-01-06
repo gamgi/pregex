@@ -139,25 +139,25 @@ mod test {
     fn test_step_states_exact_quantifier() {
         let nfa = vec![
             State::anchor_start(Some(1)),
-            State::literal('a', (Some(2), None)),
             State::new(
                 Kind::ExactQuantifier(2),
-                (Some(1), Some(3)),
+                (Some(2), Some(3)),
                 Some(Dist::ExactlyTimes(2).count()),
             ),
+            State::literal('a', (Some(1), None)),
             State::literal('b', (Some(4), None)),
             State::terminal(),
         ];
         let states = initial_state(&nfa, true);
-        assert_eq!(states, [(1, 1.0)].into());
+        assert_eq!(states, [(1, 1.0), (2, 1.0), (3, 0.0)].into());
 
         let counts = add_counts(&states, &HashMap::new());
-        assert_eq!(counts, [(1, 1)].into());
+        assert_eq!(counts, [(1, 1), (2, 1)].into());
         let states = step_states(states, &counts, &Kind::Literal('a'), &nfa);
         assert_eq!(states, [(1, 1.0), (2, 1.0)].into());
 
         let counts = add_counts(&states, &counts);
-        assert_eq!(counts, [(1, 2), (2, 1)].into());
+        assert_eq!(counts, [(1, 2), (2, 2)].into());
         let states = step_states(states, &counts, &Kind::Literal('a'), &nfa);
         assert_eq!(states, [(1, 1.0), (2, 1.0), (3, 1.0)].into());
 
@@ -167,21 +167,54 @@ mod test {
     }
 
     #[test]
+    fn test_step_states_exact_zero_quantifier() {
+        let nfa = vec![
+            State::anchor_start(Some(1)),
+            State::new(
+                Kind::ExactQuantifier(0),
+                (Some(2), Some(3)),
+                Some(Dist::PGeometric(1, u64::MAX, 0.5).count()),
+            ),
+            State::literal('a', (Some(1), Some(3))),
+            State::literal('b', (Some(4), None)),
+            State::terminal(),
+        ];
+        let states = initial_state(&nfa, true);
+        assert_eq!(states, [(1, 1.0), (2, 1.0), (3, 0.0)].into());
+
+        let counts = add_counts(&states, &HashMap::new());
+        assert_eq!(counts, [(1, 1), (2, 1)].into());
+
+        let states = step_states(states, &counts, &Kind::Literal('a'), &nfa);
+        assert_eq!(states, [(1, 1.0), (2, 1.0), (3, 0.5)].into());
+
+        let counts = add_counts(&states, &counts);
+        assert_eq!(counts, [(1, 2), (2, 2), (3, 1)].into());
+        let states = step_states(states, &counts, &Kind::Literal('a'), &nfa);
+        assert_eq!(states, [(1, 1.0), (2, 1.0), (3, 0.25)].into());
+
+        let counts = add_counts(&states, &counts);
+        let states = step_states(states, &counts, &Kind::Literal('b'), &nfa);
+        assert_eq!(states, [(4, 0.25)].into());
+    }
+
+    #[test]
     fn test_step_states_geo_quantifier() {
         let nfa = vec![
             State::anchor_start(Some(1)),
-            State::literal('a', (Some(2), None)),
             State::new(
                 Kind::ExactQuantifier(2),
-                (Some(1), Some(3)),
+                (Some(2), Some(3)),
                 Some(Dist::PGeometric(2, u64::MAX, 0.5).count()),
             ),
+            State::literal('a', (Some(1), None)),
             State::literal('b', (Some(4), None)),
             State::terminal(),
         ];
         let states = initial_state(&nfa, true);
         let counts = add_counts(&states, &HashMap::new());
-        assert_eq!(states, [(1, 1.0)].into());
+        assert_eq!(states, [(1, 1.0), (2, 1.0), (3, 0.0)].into());
+        assert_eq!(counts, [(1, 1), (2, 1)].into());
 
         let states = step_states(states, &counts, &Kind::Literal('a'), &nfa);
         let counts = add_counts(&states, &counts);
