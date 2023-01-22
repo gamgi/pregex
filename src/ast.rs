@@ -24,7 +24,7 @@ pub enum Kind {
     Start,
     Terminal,
     Classified(Box<AstNode>, Option<DistLink>),
-    Class(Vec<char>),
+    Class(bool, Vec<char>),
     Quantified(Box<AstNode>, Box<AstNode>, Option<DistLink>),
     Quantifier(char),
 }
@@ -34,9 +34,13 @@ impl fmt::Display for Kind {
         match &self {
             Kind::Literal(c) => write!(f, "{}", c),
             Kind::Dot => write!(f, "."),
-            Kind::Class(c) => match c.len() > 5 {
+            Kind::Class(neg, c) if c.len() > 5 => match neg {
                 true => write!(f, "[{}..]", c.iter().take(3).join("")),
-                false => write!(f, "[{}]", c.iter().join("")),
+                false => write!(f, "[^{}..]", c.iter().take(3).join("")),
+            },
+            Kind::Class(neg, c) => match neg {
+                true => write!(f, "[{}]", c.iter().join("")),
+                false => write!(f, "[^{}]", c.iter().join("")),
             },
             Kind::Classified(l, Some(d)) => write!(f, "[{}{}]", l, d),
             Kind::Classified(l, None) => write!(f, "[{}]", l),
@@ -156,7 +160,7 @@ pub fn build_ast_from_expr(pair: Pair<Rule>) -> AstNode {
         }
         Rule::CharacterClass | Rule::ShortClass | Rule::PosixClass => AstNode {
             length: 1,
-            kind: Kind::Class(build_chars(pair)),
+            kind: Kind::Class(true, build_chars(pair)),
         },
         Rule::EOI => AstNode {
             length: 0,

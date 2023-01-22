@@ -133,7 +133,7 @@ pub fn evaluate_state(
                     }
                 }
             }
-            Kind::Class(ref match_c) => {
+            Kind::Class(neg, ref match_c) => {
                 if is_epsilon {
                     return vec![Transition(Some(idx), p)];
                 }
@@ -340,7 +340,7 @@ mod test {
         let nfa = vec![
             State::anchor_start(Some(1)),
             State::new(
-                Kind::Class(vec!['a', 'b', 'c']),
+                Kind::Class(true, vec!['a', 'b', 'c']),
                 (Some(2), None),
                 Some(DistLink::Indexed(Dist::PGeometric(0, u64::MAX, 0.5))),
             ),

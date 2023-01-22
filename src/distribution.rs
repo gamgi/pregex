@@ -54,7 +54,7 @@ impl Dist {
             _ => 0, // required n is zero
         };
         let c = match kind {
-            Kind::Class(c) => Some(c),
+            Kind::Class(_, c) => Some(c),
             _ => None,
         };
 
@@ -294,7 +294,7 @@ impl DistLink {
                 };
 
                 match kind {
-                    Kind::Class(chars) => match chars.iter().position(|&r| r == *c) {
+                    Kind::Class(_, chars) => match chars.iter().position(|&r| r == *c) {
                         // match, evaluate for p
                         Some(idx) => match d {
                             // zipf distribution has support for x >= 1

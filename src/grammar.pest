@@ -19,9 +19,9 @@ Dot             =  { "." }
 
 Class           = _{ ShortClass | LongClass }
 ShortClass      =  { "\\w" | "\\s" | "\\d" }
-LongClass       =  { "[" ~ (PosixClass | CharacterClass | ShortClass) ~ Dist? ~ "]" }
+LongClass       =  { "[" ~ "^"? ~ CharacterClass ~ Dist? ~ "]" }
 PosixClass      =  { "[:digit:]" | "[:space:]" }
-CharacterClass  =  { ( Literal | Dot | ShortClass )+ }
+CharacterClass  =  { (ShortClass | PosixClass | Literal | Dot | ShortClass)+ }
 
 Quantifier      = _{ ShortQuantifier | LongQuantifier }
 ShortQuantifier =  { "+" | "?" | "*" }

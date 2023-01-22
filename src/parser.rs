@@ -223,7 +223,7 @@ mod test {
         let expected = vec![
             AstNode {
                 length: 1,
-                kind: Kind::Class(vec!['a', 'b', 'c']),
+                kind: Kind::Class(true, vec!['a', 'b', 'c']),
             },
             AstNode {
                 length: 0,
@@ -242,7 +242,7 @@ mod test {
                 kind: Kind::Classified(
                     Box::new(AstNode {
                         length: 1,
-                        kind: Kind::Class(vec!['a', 'b', 'c']),
+                        kind: Kind::Class(true, vec!['a', 'b', 'c']),
                     }),
                     Some(Dist::PGeometric(0, u64::MAX, 0.5).index()),
                 ),
@@ -264,7 +264,7 @@ mod test {
                 kind: Kind::Classified(
                     Box::new(AstNode {
                         length: 1,
-                        kind: Kind::Class(vec!['a', 'b']),
+                        kind: Kind::Class(true, vec!['a', 'b']),
                     }),
                     Some(Dist::Categorical(vec![0.10000000000000009, 0.7, 0.2]).index()),
                 ),
@@ -286,7 +286,7 @@ mod test {
                 kind: Kind::Classified(
                     Box::new(AstNode {
                         length: 1,
-                        kind: Kind::Class(vec!['a', 'b', 'c']),
+                        kind: Kind::Class(true, vec!['a', 'b', 'c']),
                     }),
                     Some(
                         Dist::Categorical(vec![0.0, 0.7, 0.15000000000000002, 0.15000000000000002])
@@ -311,7 +311,10 @@ mod test {
                 kind: Kind::Classified(
                     Box::new(AstNode {
                         length: 1,
-                        kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+                        kind: Kind::Class(
+                            true,
+                            vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+                        ),
                     }),
                     Some(
                         Dist::Categorical(vec![
@@ -338,7 +341,7 @@ mod test {
                 kind: Kind::Classified(
                     Box::new(AstNode {
                         length: 1,
-                        kind: Kind::Class(vec!['a', 'b']),
+                        kind: Kind::Class(true, vec!['a', 'b']),
                     }),
                     Some(Dist::Categorical(vec![0.1, 0.7, 0.20000000000000007]).index()),
                 ),
@@ -360,7 +363,10 @@ mod test {
                 kind: Kind::Classified(
                     Box::new(AstNode {
                         length: 1,
-                        kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+                        kind: Kind::Class(
+                            true,
+                            vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+                        ),
                     }),
                     Some(
                         Dist::Categorical(vec![
@@ -402,7 +408,10 @@ mod test {
                 kind: Kind::Classified(
                     Box::new(AstNode {
                         length: 1,
-                        kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+                        kind: Kind::Class(
+                            true,
+                            vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+                        ),
                     }),
                     Some(
                         Dist::Categorical(vec![
@@ -432,7 +441,7 @@ mod test {
         let expected = vec![
             AstNode {
                 length: 1,
-                kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+                kind: Kind::Class(true, vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
             },
             AstNode {
                 length: 0,
@@ -448,7 +457,7 @@ mod test {
         let expected = vec![
             AstNode {
                 length: 1,
-                kind: Kind::Class(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+                kind: Kind::Class(true, vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
             },
             AstNode {
                 length: 0,

@@ -193,6 +193,15 @@ mod test {
     }
 
     #[test]
+    fn test_class_nested_geo() {
+        let nfa = compile(r"^[a\d~Geo(0.5)]$").unwrap();
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some(0.5));
+        assert_eq!(match_likelihood(&nfa, &"0".to_string(), false), Some(0.25));
+        assert_eq!(match_likelihood(&nfa, &"1".to_string(), false), Some(0.125));
+        assert_eq!(match_likelihood(&nfa, &"b".to_string(), false), None);
+    }
+
+    #[test]
     fn test_dot() {
         let nfa = compile("^a.c$").unwrap();
 

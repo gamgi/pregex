@@ -187,7 +187,7 @@ fn ast_to_frag(ast: AstNode, index: usize, outs: Outs, distribution: Option<Dist
             start: index,
             outs,
         },
-        Kind::Class(_) => Frag {
+        Kind::Class(_, _) => Frag {
             // class points to outs
             // class as start
             states: vec![State::new(ast.kind, outs, distribution)],
@@ -702,7 +702,7 @@ mod test {
                 kind: Kind::Classified(
                     Box::new(AstNode {
                         length: 1,
-                        kind: Kind::Class(vec!['a', 'b', 'c']),
+                        kind: Kind::Class(true, vec!['a', 'b', 'c']),
                     }),
                     None,
                 ),
@@ -713,7 +713,7 @@ mod test {
         let expected = vec![State::from(
             AstNode {
                 length: 1,
-                kind: Kind::Class(vec!['a', 'b', 'c']),
+                kind: Kind::Class(true, vec!['a', 'b', 'c']),
             },
             (Some(1), None),
         )];
@@ -728,7 +728,7 @@ mod test {
                 kind: Kind::Classified(
                     Box::new(AstNode {
                         length: 1,
-                        kind: Kind::Class(vec!['a', 'b', 'c']),
+                        kind: Kind::Class(true, vec!['a', 'b', 'c']),
                     }),
                     Some(Dist::PGeometric(0, u64::MAX, 0.5).count()),
                 ),
@@ -737,7 +737,7 @@ mod test {
             1,
         );
         let expected = vec![State::new(
-            Kind::Class(vec!['a', 'b', 'c']),
+            Kind::Class(true, vec!['a', 'b', 'c']),
             (Some(1), None),
             Some(Dist::PGeometric(0, u64::MAX, 0.5).count()),
         )];
