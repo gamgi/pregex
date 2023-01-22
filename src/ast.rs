@@ -119,7 +119,7 @@ pub fn build_ast_from_expr(pair: Pair<Rule>) -> AstNode {
                 ),
             }
         }
-        Rule::Literal => {
+        Rule::Literal | Rule::EscapedLiteral => {
             let c = pair.as_str().chars().next().unwrap();
             AstNode {
                 length: 1,

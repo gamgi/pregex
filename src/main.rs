@@ -101,6 +101,19 @@ mod test {
     }
 
     #[test]
+    fn test_literal_escape() {
+        let nfa = compile(r"^a\\db$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"ab".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"a0b".to_string(), false), None);
+        assert_eq!(
+            match_likelihood(&nfa, &"a\\db".to_string(), false),
+            Some(1.0)
+        );
+        assert_eq!(match_likelihood(&nfa, &"a\\ddb".to_string(), false), None);
+    }
+
+    #[test]
     fn test_quantifier_zero() {
         let nfa = compile("^ab{0}$").unwrap();
 

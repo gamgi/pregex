@@ -10,9 +10,11 @@ Concat          =  { Factor ~ Factor }
 Group           = _{ "(" ~ ( Alternation | Expression ) ~ ")" }
 
 Factor          = _{ Quantified | Group | Token }
-Token           = _{ Literal | Dot | Class }
+Token           = _{ Literal | Dot | Class | Escaped }
 Quantified      =  { ( Token | Group ) ~ Quantifier }
 Literal         =  { ASCII_ALPHANUMERIC | " " | "-" }
+Escaped         = _{ "\\" ~ EscapedLiteral }
+EscapedLiteral  = @{ ASCII }
 Dot             =  { "." }
 
 Class           = _{ ShortClass | LongClass }
