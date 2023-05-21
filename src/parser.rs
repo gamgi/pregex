@@ -223,7 +223,7 @@ mod test {
         let expected = vec![
             AstNode {
                 length: 1,
-                kind: Kind::Class(true, vec!['a', 'b', 'c']),
+                kind: Kind::Class(false, vec!['a', 'b', 'c']),
             },
             AstNode {
                 length: 0,
@@ -242,7 +242,7 @@ mod test {
                 kind: Kind::Classified(
                     Box::new(AstNode {
                         length: 1,
-                        kind: Kind::Class(true, vec!['a', 'b', 'c']),
+                        kind: Kind::Class(false, vec!['a', 'b', 'c']),
                     }),
                     Some(Dist::PGeometric(0, u64::MAX, 0.5).index()),
                 ),
@@ -264,7 +264,7 @@ mod test {
                 kind: Kind::Classified(
                     Box::new(AstNode {
                         length: 1,
-                        kind: Kind::Class(true, vec!['a', 'b']),
+                        kind: Kind::Class(false, vec!['a', 'b']),
                     }),
                     Some(Dist::Categorical(vec![0.10000000000000009, 0.7, 0.2]).index()),
                 ),
@@ -286,7 +286,7 @@ mod test {
                 kind: Kind::Classified(
                     Box::new(AstNode {
                         length: 1,
-                        kind: Kind::Class(true, vec!['a', 'b', 'c']),
+                        kind: Kind::Class(false, vec!['a', 'b', 'c']),
                     }),
                     Some(
                         Dist::Categorical(vec![0.0, 0.7, 0.15000000000000002, 0.15000000000000002])
@@ -312,7 +312,7 @@ mod test {
                     Box::new(AstNode {
                         length: 1,
                         kind: Kind::Class(
-                            true,
+                            false,
                             vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
                         ),
                     }),
@@ -341,9 +341,163 @@ mod test {
                 kind: Kind::Classified(
                     Box::new(AstNode {
                         length: 1,
-                        kind: Kind::Class(true, vec!['a', 'b']),
+                        kind: Kind::Class(false, vec!['a', 'b']),
                     }),
                     Some(Dist::Categorical(vec![0.1, 0.7, 0.20000000000000007]).index()),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_exact_class_named_dot_ast_special() {
+        let result = parse("[ab~Cat(.=1.0)]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(false, vec!['a', 'b']),
+                    }),
+                    Some(Dist::Categorical(vec![1.0, 0.0, 0.0]).index()),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_exact_class_named_all_implicit() {
+        let result = parse("[ab~Cat]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(false, vec!['a', 'b']),
+                    }),
+                    Some(Dist::Categorical(vec![0.0, 0.5, 0.5]).index()),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_exact_class_named_no_implicit() {
+        let result = parse("[^ab~Cat(a=0.5,b=0.5)]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(true, vec!['a', 'b']),
+                    }),
+                    Some(Dist::Categorical(vec![0.0, 0.5, 0.5]).index()),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_exact_class_const() {
+        let result = parse("[ab~Const]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(false, vec!['a', 'b']),
+                    }),
+                    Some(Dist::Constant(0, 0, 1.0).index()),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_exact_class_neg_all_implicit() {
+        let result = parse("[^ab~Cat]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(true, vec!['a', 'b']),
+                    }),
+                    Some(Dist::Categorical(vec![1.0, 0.0, 0.0]).index()),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_exact_class_neg() {
+        let result = parse("[^ab~Cat(a=0.1)]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(true, vec!['a', 'b']),
+                    }),
+                    Some(Dist::Categorical(vec![0.9, 0.1, 0.0]).index()),
+                ),
+            },
+            AstNode {
+                length: 0,
+                kind: Kind::Terminal,
+            },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parser_exact_class_neg_dot() {
+        let result = parse("[^ab~Cat(a=0.3,.=0.1)]").unwrap_or_default();
+        let expected = vec![
+            AstNode {
+                length: 1,
+                kind: Kind::Classified(
+                    Box::new(AstNode {
+                        length: 1,
+                        kind: Kind::Class(true, vec!['a', 'b']),
+                    }),
+                    Some(Dist::Categorical(vec![0.1, 0.3, 0.6]).index()),
                 ),
             },
             AstNode {
@@ -364,7 +518,7 @@ mod test {
                     Box::new(AstNode {
                         length: 1,
                         kind: Kind::Class(
-                            true,
+                            false,
                             vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
                         ),
                     }),
@@ -409,7 +563,7 @@ mod test {
                     Box::new(AstNode {
                         length: 1,
                         kind: Kind::Class(
-                            true,
+                            false,
                             vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
                         ),
                     }),
@@ -441,7 +595,10 @@ mod test {
         let expected = vec![
             AstNode {
                 length: 1,
-                kind: Kind::Class(true, vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+                kind: Kind::Class(
+                    false,
+                    vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+                ),
             },
             AstNode {
                 length: 0,
@@ -457,7 +614,10 @@ mod test {
         let expected = vec![
             AstNode {
                 length: 1,
-                kind: Kind::Class(true, vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+                kind: Kind::Class(
+                    false,
+                    vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+                ),
             },
             AstNode {
                 length: 0,
@@ -570,6 +730,7 @@ mod test {
     #[test]
     fn test_parser_exact_class() {
         assert_eq!(ast_as_str(parse("[ab]").unwrap()), "[ab]");
+        assert_eq!(ast_as_str(parse("[^ab]").unwrap()), "[^ab]");
     }
 
     #[test]

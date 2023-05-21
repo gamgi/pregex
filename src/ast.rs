@@ -35,12 +35,12 @@ impl fmt::Display for Kind {
             Kind::Literal(c) => write!(f, "{}", c),
             Kind::Dot => write!(f, "."),
             Kind::Class(neg, c) if c.len() > 5 => match neg {
-                true => write!(f, "[{}..]", c.iter().take(3).join("")),
-                false => write!(f, "[^{}..]", c.iter().take(3).join("")),
+                true => write!(f, "[^{}..]", c.iter().take(3).join("")),
+                false => write!(f, "[{}..]", c.iter().take(4).join("")),
             },
             Kind::Class(neg, c) => match neg {
-                true => write!(f, "[{}]", c.iter().join("")),
-                false => write!(f, "[^{}]", c.iter().join("")),
+                true => write!(f, "[^{}]", c.iter().join("")),
+                false => write!(f, "[{}]", c.iter().join("")),
             },
             Kind::Classified(l, Some(d)) => write!(f, "[{}{}]", l, d),
             Kind::Classified(l, None) => write!(f, "[{}]", l),
@@ -71,7 +71,8 @@ impl fmt::Display for AstNode {
 }
 
 pub fn build_ast_from_expr(pair: Pair<Rule>) -> AstNode {
-    match pair.as_rule() {
+    let rule = pair.as_rule();
+    match rule {
         Rule::Alternation => {
             let mut pair = pair.into_inner();
             let left = pair.next().unwrap();
@@ -134,9 +135,20 @@ pub fn build_ast_from_expr(pair: Pair<Rule>) -> AstNode {
             length: 1,
             kind: Kind::Dot,
         },
-        Rule::LongClass => {
+        Rule::LongClass | Rule::LongClassNeg => {
             let mut pair = pair.into_inner();
-            let left_ast = build_ast_from_expr(pair.next().unwrap());
+
+            let left_ast = match rule {
+                Rule::LongClass => build_ast_from_expr(pair.next().unwrap()),
+                Rule::LongClassNeg => {
+                    let mut ast = build_ast_from_expr(pair.next().unwrap());
+                    if let Kind::Class(false, c) = ast.kind {
+                        ast.kind = Kind::Class(true, c);
+                    }
+                    ast
+                }
+                _ => unreachable!(),
+            };
 
             // pair.next is Option<Dist>
             let class_dist = match pair.next() {
@@ -160,7 +172,7 @@ pub fn build_ast_from_expr(pair: Pair<Rule>) -> AstNode {
         }
         Rule::CharacterClass | Rule::ShortClass | Rule::PosixClass => AstNode {
             length: 1,
-            kind: Kind::Class(true, build_chars(pair)),
+            kind: Kind::Class(false, build_chars(pair)),
         },
         Rule::EOI => AstNode {
             length: 0,

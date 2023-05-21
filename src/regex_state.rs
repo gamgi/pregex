@@ -102,7 +102,7 @@ pub fn evaluate_state(
 
                 let pb = *states.get(&idx).unwrap_or(&p);
                 let (_, p1) = match &state.dist {
-                    Some(dist) => dist.pmf_link(token, n, &state.kind, false),
+                    Some(dist) => dist.pmf_link(token, Some(n), &state.kind, false, false),
                     None => (1., 1.),
                 };
 
@@ -133,19 +133,24 @@ pub fn evaluate_state(
                     }
                 }
             }
-            Kind::Class(neg, ref match_c) => {
+            Kind::Class(is_negate, ref match_c) => {
                 if is_epsilon {
                     return vec![Transition(Some(idx), p)];
                 }
 
                 if let Kind::Literal(c) = token {
                     let idx = match match_c.iter().position(|&r| r == *c) {
-                        Some(i) => i as u64,
-                        None => return vec![],
+                        Some(i) => Some(i as u64),
+                        None => None,
                     };
                     let (_, p1) = match &state.dist {
-                        Some(dist) => dist.pmf_link(token, idx, &state.kind, false),
-                        None => (1., 1.),
+                        Some(dist) => dist.pmf_link(token, idx, &state.kind, is_negate, false),
+                        None => match (idx, is_negate) {
+                            (None, false) => (1., 0.),
+                            (None, true) => (1., 1.),
+                            (Some(_), false) => (1., 1.),
+                            (Some(_), true) => (1., 0.),
+                        },
                     };
 
                     return evaluate_state(state.outs.0, token, p * p1, nfa, counts, states, true);
@@ -340,7 +345,7 @@ mod test {
         let nfa = vec![
             State::anchor_start(Some(1)),
             State::new(
-                Kind::Class(true, vec!['a', 'b', 'c']),
+                Kind::Class(false, vec!['a', 'b', 'c']),
                 (Some(2), None),
                 Some(DistLink::Indexed(Dist::PGeometric(0, u64::MAX, 0.5))),
             ),

@@ -17,9 +17,10 @@ Escaped         = _{ "\\" ~ EscapedLiteral }
 EscapedLiteral  = @{ ASCII }
 Dot             =  { "." }
 
-Class           = _{ ShortClass | LongClass }
+Class           = _{ ShortClass | LongClassNeg | LongClass }
 ShortClass      =  { "\\w" | "\\s" | "\\d" }
-LongClass       =  { "[" ~ "^"? ~ CharacterClass ~ Dist? ~ "]" }
+LongClass       =  { "[" ~ CharacterClass ~ Dist? ~ "]" }
+LongClassNeg    =  { "[^" ~ CharacterClass ~ Dist? ~ "]" }
 PosixClass      =  { "[:digit:]" | "[:space:]" }
 CharacterClass  =  { (ShortClass | PosixClass | Literal | Dot | ShortClass)+ }
 

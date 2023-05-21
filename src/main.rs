@@ -157,6 +157,102 @@ mod test {
     }
 
     #[test]
+    fn test_class() {
+        let nfa = compile("^a[bc]c$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"ac".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"abc".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"acc".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"adc".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"abcc".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_class_negate() {
+        let nfa = compile("^a[^bc]c$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa, &"ac".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"abc".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"adc".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"aec".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"adcc".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_class_categorical() {
+        let nfa = compile("^[abc~Cat(a=0.3,b=0.3)]$").unwrap();
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some(0.3));
+        assert_eq!(match_likelihood(&nfa, &"b".to_string(), false), Some(0.3));
+        assert_eq!(match_likelihood(&nfa, &"c".to_string(), false), Some(0.4));
+        assert_eq!(match_likelihood(&nfa, &"d".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_class_categorical_symmetry_1() {
+        let nfa = compile("^[abc~Const]$").unwrap();
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"b".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"c".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"d".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_class_categorical_negate_symmetry_1() {
+        let nfa = compile("^[^abc~Const]$").unwrap();
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"b".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"c".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa, &"d".to_string(), false), Some(1.0));
+    }
+
+    #[test]
+    fn test_class_categorical_negate_symmetry_2() {
+        let nfa = compile("^[^abc~Const(0.5)]$").unwrap();
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some(0.5));
+        assert_eq!(match_likelihood(&nfa, &"b".to_string(), false), Some(0.5));
+        assert_eq!(match_likelihood(&nfa, &"c".to_string(), false), Some(0.5));
+        assert_eq!(match_likelihood(&nfa, &"d".to_string(), false), Some(1.0));
+    }
+
+    #[test]
+    fn test_class_negate_categorical() {
+        let nfa = compile("^[^abc~Cat(a=0.3,b=0.3)]$").unwrap();
+        assert_eq!(match_likelihood(&nfa, &"a".to_string(), false), Some(0.3));
+        assert_eq!(match_likelihood(&nfa, &"b".to_string(), false), Some(0.3));
+        assert_eq!(match_likelihood(&nfa, &"c".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa, &"d".to_string(), false), Some(0.4));
+    }
+
+    #[test]
+    fn test_class_negate_categorical_symmetry() {
+        let nfa1 = compile("^[^ab~Cat]$").unwrap();
+        let nfa2 = compile("^[ab~Cat]$").unwrap();
+
+        assert_eq!(match_likelihood(&nfa1, &"a".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa2, &"a".to_string(), false), Some(0.5));
+
+        assert_eq!(match_likelihood(&nfa1, &"b".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa2, &"b".to_string(), false), Some(0.5));
+
+        assert_eq!(match_likelihood(&nfa1, &"d".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa2, &"d".to_string(), false), None);
+    }
+
+    #[test]
+    fn test_class_negate_categorical_symmetry2() {
+        let nfa1 = compile("^[^ab~Cat]$").unwrap();
+        let nfa2 = compile("^[ab~Cat(.=1.0)]$").unwrap();
+        assert_eq!(match_likelihood(&nfa1, &"a".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa2, &"a".to_string(), false), None);
+
+        assert_eq!(match_likelihood(&nfa1, &"b".to_string(), false), None);
+        assert_eq!(match_likelihood(&nfa2, &"b".to_string(), false), None);
+
+        assert_eq!(match_likelihood(&nfa1, &"c".to_string(), false), Some(1.0));
+        assert_eq!(match_likelihood(&nfa2, &"c".to_string(), false), Some(1.0));
+    }
+
+    #[test]
     #[rustfmt::skip]
     fn test_class_zipf() {
         // n = 2, 1st is 2/3 and the 2nd is 1/3
@@ -258,16 +354,5 @@ mod test {
         assert_eq!(match_likelihood(&nfa, &"a2c".to_string(), false), Some(1.0));
         assert_eq!(match_likelihood(&nfa, &"a12c".to_string(), false), None);
         assert_eq!(match_likelihood(&nfa, &"abc".to_string(), false), None);
-    }
-
-    #[test]
-    fn test_long_class() {
-        let nfa = compile("^a[bc]c$").unwrap();
-
-        assert_eq!(match_likelihood(&nfa, &"ac".to_string(), false), None);
-        assert_eq!(match_likelihood(&nfa, &"abc".to_string(), false), Some(1.0));
-        assert_eq!(match_likelihood(&nfa, &"acc".to_string(), false), Some(1.0));
-        assert_eq!(match_likelihood(&nfa, &"adc".to_string(), false), None);
-        assert_eq!(match_likelihood(&nfa, &"abcc".to_string(), false), None);
     }
 }
