@@ -53,9 +53,9 @@ impl Dist {
             Kind::ExactQuantifier(n) => *n,
             _ => 0, // required n is zero
         };
-        let c = match kind {
-            Kind::Class(c) => Some(c),
-            _ => None,
+        let (is_negate, c) = match kind {
+            Kind::Class(neg, c) => (*neg, Some(c)),
+            _ => (false, None),
         };
 
         let mut pair = dist_pair.into_inner();
@@ -115,26 +115,61 @@ impl Dist {
                     None => 1,
                 };
 
-                // Sum of probability masses with given weight
-                let explicit_mass = params_named.values().sum::<f64>();
-                let implicit_mass = f64::max(0.0, 1.0 - explicit_mass);
+                let prob_mass = match is_negate {
+                    true => {
+                        // Calculate excplicit and remainder mass
+                        let explicit_mass = params_named
+                            .iter()
+                            .filter_map(|(k, v)| match *k == '.' {
+                                true => None,
+                                false => Some(*v),
+                            })
+                            .sum::<f64>();
+                        let remainder_mass = match params_named.get(&'.') {
+                            Some(v) => *v,
+                            None => f64::max(0.0, 1.0 - explicit_mass),
+                        };
 
-                // Probability mass for valid character without given weight
-                let p_implicit: f64 = f64::max(0.0, implicit_mass) / n_implicit as f64;
-                let mut prob_mass: Vec<f64> = c
-                    .expect("chars to be passed")
-                    .iter()
-                    .map(|c| *params_named.get(c).unwrap_or(&p_implicit))
-                    .collect();
+                        // Rest of proability mass is implicit
+                        let implicit_mass = f64::max(0.0, 1.0 - explicit_mass - remainder_mass);
 
-                let p_remainder: f64 = match params_named.get(&'.') {
-                    Some(v) => *v,
-                    None => f64::max(0.0, 1.0 - prob_mass.iter().sum::<f64>()),
+                        // Probability mass for valid character without given weight
+                        let p_implicit = f64::max(0.0, implicit_mass) / n_implicit as f64;
+
+                        let mut prob_mass: Vec<f64> = c
+                            .expect("chars to be passed")
+                            .iter()
+                            .map(|c| *params_named.get(c).unwrap_or(&p_implicit))
+                            .collect();
+
+                        // Insert remainder as first item to ensure prob_mass sum is not zero
+                        prob_mass.insert(0, remainder_mass);
+                        prob_mass
+                    }
+                    false => {
+                        // Calculate excplicit and remainder mass
+                        let explicit_mass = params_named.values().sum::<f64>();
+                        let implicit_mass = f64::max(0.0, 1.0 - explicit_mass);
+
+                        // Probability mass for valid character without given weight
+                        let p_implicit = f64::max(0.0, implicit_mass) / n_implicit as f64;
+                        let mut prob_mass: Vec<f64> = c
+                            .expect("chars to be passed")
+                            .iter()
+                            .map(|c| *params_named.get(c).unwrap_or(&p_implicit))
+                            .collect();
+
+                        // Probability mass for invalid character
+                        let p_remainder = match params_named.get(&'.') {
+                            Some(v) => *v,
+                            None => f64::max(0.0, 1.0 - prob_mass.iter().sum::<f64>()),
+                        };
+
+                        // Insert remainder as first item to ensure prob_mass sum is not zero
+                        prob_mass.insert(0, p_remainder);
+                        prob_mass
+                    }
                 };
-
-                // Insert remainder as first item to ensure prob_mass sum is not zero
-                prob_mass.insert(0, p_remainder);
-
                 Dist::Categorical(prob_mass)
             }
             "zipf" => {
@@ -153,15 +188,15 @@ impl Dist {
 
     /// Test helper
     pub(crate) fn evaluated(&self, x: u64, log: bool) -> (f64, f64) {
-        self.evaluate(Some(x), log)
+        self.evaluate(x, log)
     }
 
     /// Evaluate (p0, p1) for state arrows (state.outs)
-    pub fn evaluate(&self, x: Option<u64>, log: bool) -> (f64, f64) {
+    pub fn evaluate(&self, x: u64, log: bool) -> (f64, f64) {
         // Special distributions
         match self {
             Dist::Constant(n_min, n_max, p) => {
-                let n = x.unwrap();
+                let n = x;
                 return match n >= *n_min && n <= *n_max {
                     true => match log {
                         true => return (p.ln(), p.ln()),
@@ -172,7 +207,7 @@ impl Dist {
             }
             #[allow(clippy::comparison_chain)]
             Dist::ExactlyTimes(n_match) => {
-                let n = x.unwrap();
+                let n = x;
                 // does not depend on log
                 if n == *n_match {
                     return (0.0, 1.0);
@@ -188,46 +223,38 @@ impl Dist {
         // Evaluate point mass function from distribution
         let p = match self {
             Dist::PGeometric(n_min, _, c) => {
-                let n = x.unwrap();
-                if n < *n_min {
+                if x < *n_min {
                     return (1.0, 0.0);
                 }
-                let x = n - n_min + 1;
+                let x = x - n_min + 1;
                 match log {
                     true => Geometric::new(*c).unwrap().ln_pmf(x),
                     false => Geometric::new(*c).unwrap().pmf(x),
                 }
             }
             Dist::PBinomial(_, n_max, p) => {
-                let n = x.unwrap();
-                if n > *n_max {
+                if x > *n_max {
                     return (0.0, 0.0);
                 }
-                let x = n;
                 match log {
                     true => Binomial::new(*p, *n_max).unwrap().ln_pmf(x),
                     false => Binomial::new(*p, *n_max).unwrap().pmf(x),
                 }
             }
             Dist::PBernoulli(_, n_max, p) => {
-                let n = x.unwrap();
-                if n > *n_max {
+                if x > *n_max {
                     return (1.0, 0.0);
                 }
-                let x = n;
                 match log {
                     true => Bernoulli::new(*p).unwrap().ln_pmf(x),
                     false => Bernoulli::new(*p).unwrap().pmf(x),
                 }
             }
             Dist::PZipf(_, n_max, s) => {
-                let n = x.unwrap();
-                let p = zipf(n, *s, *n_max);
+                let p = zipf(x, *s, *n_max);
                 return (1. - p, p);
             }
             Dist::Categorical(prob_mass) => {
-                // Zeroth index is p_rest
-                let x = x.unwrap_or(0);
                 let p = match log {
                     true => Categorical::new(prob_mass).unwrap().ln_pmf(x),
                     false => Categorical::new(prob_mass).unwrap().pmf(x),
@@ -281,34 +308,54 @@ pub enum DistLink {
 impl DistLink {
     /// Calculates the probability mass function for the linked distribution.
     ///
-    /// Equivalent to pmf(link(token, n_visits))
-    pub fn pmf_link(&self, token: &Token, n_visits: u64, kind: &Kind, log: bool) -> (f64, f64) {
-        match self {
-            DistLink::Counted(d) => d.evaluate(Some(n_visits), log),
+    /// Equivalent to pmf(link(token, n_visits, ...))
+    pub fn pmf_link(
+        &self,
+        token: &Token,
+        x: Option<u64>,
+        kind: &Kind,
+        is_inverse: bool,
+        log: bool,
+    ) -> (f64, f64) {
+        let (p0, p1) = match self {
+            DistLink::Counted(d) => d.evaluate(x.unwrap_or(0), log),
             DistLink::Indexed(d) => {
                 let c = match token {
                     Kind::Literal(c) => c,
                     _ => {
+                        // skip non literals for now
                         return (0., 0.);
                     }
                 };
 
-                match kind {
-                    Kind::Class(chars) => match chars.iter().position(|&r| r == *c) {
-                        // match, evaluate for p
-                        Some(idx) => match d {
-                            // zipf distribution has support for x >= 1
-                            Dist::PZipf(_, _, _) => d.evaluate(Some(idx as u64 + 1), log),
-                            Dist::Categorical(_) => d.evaluate(Some(idx as u64 + 1), log),
-                            _ => d.evaluate(Some(idx as u64), log),
+                // TODO add to PR comments that this changed, so no longer pass Option<x> instead handle None in pmf_link
+
+                if let Some(x) = x {
+                    match d {
+                        // zipf distribution has support for x > 0
+                        Dist::PZipf(_, _, _) => d.evaluate(x + 1, log),
+                        // categorical has support for x > 0 due to p_rest
+                        Dist::Categorical(_) => d.evaluate(x + 1, log),
+                        Dist::Constant(_, _, _) => d.evaluate(0, log),
+                        _ => d.evaluate(x, log),
+                    }
+                } else {
+                    match d {
+                        Dist::Categorical(prob_mass) => {
+                            let p = prob_mass.get(0).unwrap();
+                            (1. - p, *p)
+                        }
+                        Dist::Constant(_, _, p) => match is_inverse {
+                            true => (*p, 1.),
+                            false => (*p, 1. - p),
                         },
-                        // no match, evaluate for p_rest
-                        None => d.evaluate(None, log),
-                    },
-                    _ => (0., 0.),
+                        _ => (0., 0.),
+                    }
                 }
             }
-        }
+        };
+
+        (p0, p1)
     }
 }
 
